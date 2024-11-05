@@ -10,10 +10,23 @@ export class AttendanceController {
     req: Request,
     res: Response
   ) => {
-    const { startDate, endDate } = req.body;
+    const { startDate, endDate, page, pageSize } = req.body;
 
     this.categoryService
-      .getMonthlyAttendanceReport(startDate, endDate)
+      .getMonthlyAttendanceReport(startDate, endDate, page, pageSize)
+      .then((data) => {
+        return HttpResponseHandler.success(res, data);
+      })
+      .catch((error) => {
+        return this.handleError(error, res);
+      });
+  };
+
+  searchAttendanceByName: RequestHandler = (req: Request, res: Response) => {
+    const { name, page, pageSize, startDate, endDate } = req.body;
+
+    this.categoryService
+      .searchAttendanceByName({ name, page, pageSize, startDate, endDate })
       .then((data) => {
         return HttpResponseHandler.success(res, data);
       })
@@ -27,11 +40,14 @@ export class AttendanceController {
     req: Request,
     res: Response
   ) => {
-    // const { startDate = "", endDate = "" } = req.query; // Cambiar a `req.query` si estás enviando parámetros en la URL
+    const { startDate = "", endDate = "" } = req.query;
 
     try {
       const buffer = await this.categoryService.downloadMonthlyAttendanceReport(
-        {}
+        {
+          startDate: startDate as string,
+          endDate: endDate as string,
+        }
       );
 
       // Configura los encabezados de la respuesta para forzar la descarga
