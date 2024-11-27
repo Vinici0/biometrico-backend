@@ -4,7 +4,8 @@ import { envs } from "./envs";
 const sequelize = new Sequelize({
   dialect: "sqlite",
   storage: envs.DB_STORAGE_PATH,
-  logging: console.log,
+  // logging: console.log,
+  logging: false,
 });
 
 export default sequelize;

@@ -16,16 +16,14 @@ export class AttendanceRoutes {
     );
 
     router.post(
-      "/search-attendance-by-name",
-      attendanceController.searchAttendanceByName
+      "/searchAttendance",
+      attendanceController.searchAttendance
     );
 
     router.get(
       "/download-excel",
       attendanceController.downloadMonthlyAttendanceReport
     );
-
-
 
     return router;
   }

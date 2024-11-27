@@ -22,11 +22,11 @@ export class AttendanceController {
       });
   };
 
-  searchAttendanceByName: RequestHandler = (req: Request, res: Response) => {
-    const { name, page, pageSize, startDate, endDate } = req.body;
+  searchAttendance: RequestHandler = (req: Request, res: Response) => {
+    const { name, page, pageSize, startDate, endDate, department } = req.body;
 
     this.categoryService
-      .searchAttendanceByName({ name, page, pageSize, startDate, endDate })
+      .searchAttendance({ name, page, pageSize, startDate, endDate, department })
       .then((data) => {
         return HttpResponseHandler.success(res, data);
       })
@@ -40,13 +40,14 @@ export class AttendanceController {
     req: Request,
     res: Response
   ) => {
-    const { startDate = "", endDate = "" } = req.query;
 
+    const { startDate , endDate  } = req.query;
+    
     try {
       const buffer = await this.categoryService.downloadMonthlyAttendanceReport(
         {
           startDate: startDate as string,
-          endDate: endDate as string,
+          endDate: endDate as string, 
         }
       );
 
