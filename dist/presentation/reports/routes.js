@@ -11,7 +11,7 @@ class AttendanceRoutes {
         const attendanceService = new attendance_service_1.AttendanceService();
         const attendanceController = new controller_1.AttendanceController(attendanceService);
         router.post("/monthly-attendance-report", attendanceController.getMonthlyAttendanceReport);
-        router.post("/search-attendance-by-name", attendanceController.searchAttendanceByName);
+        router.post("/searchAttendance", attendanceController.searchAttendance);
         router.get("/download-excel", attendanceController.downloadMonthlyAttendanceReport);
         return router;
     }

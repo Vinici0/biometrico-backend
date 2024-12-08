@@ -5,6 +5,7 @@ const envs_1 = require("./envs");
 const sequelize = new sequelize_1.Sequelize({
     dialect: "sqlite",
     storage: envs_1.envs.DB_STORAGE_PATH,
-    logging: console.log,
+    // logging: console.log,
+    logging: false,
 });
 exports.default = sequelize;

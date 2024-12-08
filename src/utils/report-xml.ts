@@ -165,6 +165,7 @@ const createColumnHeaders = (
     }
   });
 };
+
 const styleHeaders = (sheet: ExcelJS.Worksheet) => {
   const verticalHeaders = ["FALTAS", "SALIDAS", "VACACIÓN", "ENFERMEDAD"];
   const verticalHeaderColumns: number[] = [];
@@ -213,6 +214,8 @@ const styleHeaders = (sheet: ExcelJS.Worksheet) => {
     sheet.getColumn(colNumber).width = 8; // Ajusta este valor según necesites
   });
 };
+
+
 const processEmployeeData = (
   sheet: ExcelJS.Worksheet,
   data: AsistenciaData,

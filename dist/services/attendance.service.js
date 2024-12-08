@@ -47,7 +47,7 @@ class AttendanceService {
               hr_employee e ON p.emp_id = e.id
                   LEFT JOIN
               hr_department dp ON e.emp_dept = dp.id
-          WHERE date(p.punch_time) BETWEEN :startDate AND :endDate
+          WHERE date(p.punch_time) BETWEEN :startDate AND :endDate AND dp.dept_name  = 'Personal.HeH'
           GROUP BY date(p.punch_time), e.emp_code, e.emp_firstname, e.emp_lastname, dp.dept_name
           ORDER BY date(p.punch_time)
           LIMIT :pageSize OFFSET :offset;
@@ -63,48 +63,70 @@ class AttendanceService {
             }
         });
     }
-    searchAttendanceByName(params) {
+    searchAttendance(params) {
         return __awaiter(this, void 0, void 0, function* () {
             try {
-                const { name = "", startDate = "", endDate = "", page = 1, pageSize = 10 } = params;
+                const { name = "", startDate = "", endDate = "", page = 1, pageSize = 10, department = "", } = params;
                 const offset = (page - 1) * pageSize;
-                const results = (yield database_1.default.query(` 
+                // Base query
+                let query = `
         SELECT e.id, e.emp_code                               AS "Numero",
-        e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
-        date(p.punch_time)                       AS "Fecha",
-        MIN(time(p.punch_time))                  AS "Entrada",
-        MAX(time(p.punch_time))                  AS "Salida",
-        dp.dept_name                             AS "Departamento",
-        ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) *
-              24)                                AS "TotalHorasRedondeadas",
-        CASE strftime('%w', date(p.punch_time))
-            WHEN '0' THEN 'Domingo'
-            WHEN '1' THEN 'Lunes'
-            WHEN '2' THEN 'Martes'
-            WHEN '3' THEN 'Miércoles'
-            WHEN '4' THEN 'Jueves'
-            WHEN '5' THEN 'Viernes'
-            WHEN '6' THEN 'Sábado'
-            END                                  AS "DiaSemana"
-  
-          FROM att_punches p
-                  JOIN
-              hr_employee e ON p.emp_id = e.id
-                  LEFT JOIN
-              hr_department dp ON e.emp_dept = dp.id
-          WHERE (e.emp_firstname || ' ' || e.emp_lastname LIKE :name)
-            AND (date(p.punch_time) BETWEEN :startDate AND :endDate)
-          GROUP BY date(p.punch_time), e.emp_code, e.emp_firstname, e.emp_lastname, dp.dept_name
-          ORDER BY date(p.punch_time)
-          LIMIT :pageSize OFFSET :offset;
-              `, {
-                    replacements: { name: `%${name}%`, startDate, endDate, pageSize, offset },
+               e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
+               date(p.punch_time)                       AS "Fecha",
+               MIN(time(p.punch_time))                  AS "Entrada",
+               MAX(time(p.punch_time))                  AS "Salida",
+               dp.dept_name                             AS "Departamento",
+               ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) * 24) AS "TotalHorasRedondeadas",
+               CASE strftime('%w', date(p.punch_time))
+                   WHEN '0' THEN 'Domingo'
+                   WHEN '1' THEN 'Lunes'
+                   WHEN '2' THEN 'Martes'
+                   WHEN '3' THEN 'Miércoles'
+                   WHEN '4' THEN 'Jueves'
+                   WHEN '5' THEN 'Viernes'
+                   WHEN '6' THEN 'Sábado'
+               END                                  AS "DiaSemana"
+        FROM att_punches p
+        JOIN hr_employee e ON p.emp_id = e.id
+        LEFT JOIN hr_department dp ON e.emp_dept = dp.id
+      `;
+                // Construcción dinámica del WHERE
+                const whereClauses = [];
+                const replacements = {
+                    pageSize,
+                    offset,
+                };
+                if (name) {
+                    whereClauses.push(`(e.emp_firstname || ' ' || e.emp_lastname LIKE :name)`);
+                    replacements.name = `%${name}%`;
+                }
+                if (startDate && endDate) {
+                    whereClauses.push(`(date(p.punch_time) BETWEEN :startDate AND :endDate)`);
+                    replacements.startDate = startDate;
+                    replacements.endDate = endDate;
+                }
+                if (department) {
+                    whereClauses.push(`dp.dept_name = :department`);
+                    replacements.department = department;
+                }
+                if (whereClauses.length > 0) {
+                    query += ` WHERE ${whereClauses.join(" AND ")}`;
+                }
+                // Agregar GROUP BY y ORDER BY
+                query += `
+        GROUP BY date(p.punch_time), e.emp_code, e.emp_firstname, e.emp_lastname, dp.dept_name
+        ORDER BY date(p.punch_time)
+        LIMIT :pageSize OFFSET :offset
+      `;
+                // Ejecutar la consulta
+                const results = (yield database_1.default.query(query, {
+                    replacements,
                     type: sequelize_1.default.QueryTypes.SELECT,
                 }));
                 return results;
             }
             catch (error) {
-                console.error("Error fetching attendance report by name:", error);
+                console.error("Error fetching attendance report:", error);
                 throw error;
             }
         });
@@ -113,10 +135,8 @@ class AttendanceService {
     downloadMonthlyAttendanceReport(_a) {
         return __awaiter(this, arguments, void 0, function* ({ startDate = "2024-09-01", endDate = "2024-09-30", }) {
             try {
-                console.log("startDate", startDate);
-                console.log("endDate", endDate);
                 const results = (yield database_1.default.query(`
-                  SELECT e.id, e.emp_code                               AS "Numero",
+        SELECT e.id, e.emp_code                               AS "Numero",
         e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
         date(p.punch_time)                       AS "Fecha",
         MIN(time(p.punch_time))                  AS "Entrada",
@@ -139,7 +159,7 @@ class AttendanceService {
               hr_employee e ON p.emp_id = e.id
                   LEFT JOIN
               hr_department dp ON e.emp_dept = dp.id
-          WHERE date(p.punch_time) BETWEEN :startDate AND :endDate
+          WHERE date(p.punch_time) BETWEEN :startDate AND :endDate  AND dp.dept_name  = 'Personal.HeH'
           GROUP BY date(p.punch_time), e.emp_code, e.emp_firstname, e.emp_lastname, dp.dept_name
           ORDER BY date(p.punch_time);
                 `, {
@@ -153,7 +173,7 @@ class AttendanceService {
                     }
                     employeeResults[result.id].push(result);
                 });
-                const buffer = yield (0, report_xml_1.createExcelReport)(9, 2024, employeeResults);
+                const buffer = yield (0, report_xml_1.createExcelReport)(startDate, endDate, employeeResults);
                 return buffer;
             }
             catch (error) {

@@ -9,11 +9,13 @@ export interface EmployeeAttendance {
   Numero: string;
   Nombre: string;
   Fecha: string;
-  Entrada: string;
-  Salida: string;
-  Departamento: string;
+  Entrada: string | null;
+  Salida: string | null;
+  Departamento?: string;
   TotalHorasRedondeadas: number;
-  DiaSemana: string;
+  DiaSemana: 'Domingo' | 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado';
+  B?: 'B' | 'Z' | null;
+  Vacaciones: string | null;
 }
 
 export interface AsistenciaData {

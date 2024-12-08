@@ -26,10 +26,10 @@ class AttendanceController {
                 return this.handleError(error, res);
             });
         };
-        this.searchAttendanceByName = (req, res) => {
-            const { name, page, pageSize, startDate, endDate } = req.body;
+        this.searchAttendance = (req, res) => {
+            const { name, page, pageSize, startDate, endDate, department } = req.body;
             this.categoryService
-                .searchAttendanceByName({ name, page, pageSize, startDate, endDate })
+                .searchAttendance({ name, page, pageSize, startDate, endDate, department })
                 .then((data) => {
                 return http_response_handler_1.HttpResponseHandler.success(res, data);
             })
@@ -39,7 +39,7 @@ class AttendanceController {
         };
         //descargar reporte de asistencia xml
         this.downloadMonthlyAttendanceReport = (req, res) => __awaiter(this, void 0, void 0, function* () {
-            const { startDate = "", endDate = "" } = req.query;
+            const { startDate, endDate } = req.query;
             try {
                 const buffer = yield this.categoryService.downloadMonthlyAttendanceReport({
                     startDate: startDate,

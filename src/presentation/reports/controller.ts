@@ -11,7 +11,7 @@ export class AttendanceController {
     res: Response
   ) => {
     const { startDate, endDate, page, pageSize } = req.body;
-
+    
     this.categoryService
       .getMonthlyAttendanceReport(startDate, endDate, page, pageSize)
       .then((data) => {
@@ -23,10 +23,11 @@ export class AttendanceController {
   };
 
   searchAttendance: RequestHandler = (req: Request, res: Response) => {
-    const { name, page, pageSize, startDate, endDate, department } = req.body;
+    const { name, page, pageSize, startDate, endDate, department, status, employeeId } = req.body;
+    console.log(startDate, endDate, page, pageSize);
 
     this.categoryService
-      .searchAttendance({ name, page, pageSize, startDate, endDate, department })
+      .searchAttendance({ name, page, pageSize, startDate, endDate, department, status, employeeId })
       .then((data) => {
         return HttpResponseHandler.success(res, data);
       })
