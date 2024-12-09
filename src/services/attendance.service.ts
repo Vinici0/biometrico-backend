@@ -14,7 +14,7 @@ interface AttendanceSearchParams {
   employeeId: string;
 }
 export class AttendanceService {
-  constructor() {}
+  constructor() { }
 
   public async getMonthlyAttendanceReport(
     startDate = "",
@@ -291,7 +291,7 @@ export class AttendanceService {
             e.emp_lastname,
             e.emp_firstname;
       `;
-  
+
       // Ejecutar la consulta con reemplazos para startDate y endDate
       const results = (await sequelize.query(
         query,
@@ -300,16 +300,16 @@ export class AttendanceService {
           type: Sequelize.QueryTypes.SELECT,
         }
       )) as EmployeeAttendance[];
-  
+
       const employeeResults: AsistenciaData = {};
-  
+
       results.forEach((result) => {
         if (!employeeResults[result.id]) {
           employeeResults[result.id] = [];
         }
         employeeResults[result.id].push(result);
       });
-  
+
       const buffer = await createExcelReport(
         startDate,
         endDate,
@@ -321,4 +321,155 @@ export class AttendanceService {
       throw error;
     }
   }
+
+
+
+  // ==========================================================
+  // Métodos adicionales para el total conteo para dashboard
+
+  public async totalDashboardReport() {
+    try {
+      const queries = {
+        employee: {
+          total: `SELECT COUNT(*) AS total FROM hr_employee;`,
+          active: `SELECT COUNT(*) AS total FROM hr_employee WHERE emp_active = 1;`,
+          inactive: `SELECT COUNT(*) AS total FROM hr_employee WHERE emp_active = 0;`,
+        },
+        assistant: {
+          total: `
+            SELECT COUNT(DISTINCT ADDL.employee_id) AS employee_count
+            FROM att_day_details AS ADDL
+            INNER JOIN hr_employee AS HE ON ADDL.employee_id = HE.id
+            WHERE DATE(ADDL.checkin) = CURRENT_DATE;
+          `,
+          support: `
+            SELECT COUNT(DISTINCT ADDL.employee_id) AS employee_count
+            FROM att_day_details AS ADDL
+            INNER JOIN hr_employee AS HE ON ADDL.employee_id = HE.id
+            WHERE HE.emp_dept = 1 AND DATE(ADDL.checkin) = CURRENT_DATE;
+          `,
+          normal: `
+            SELECT COUNT(DISTINCT ADDL.employee_id) AS employee_count
+            FROM att_day_details AS ADDL
+            INNER JOIN hr_employee AS HE ON ADDL.employee_id = HE.id
+            WHERE HE.emp_dept = 5 AND DATE(ADDL.checkin) = CURRENT_DATE;
+          `,
+        },
+      };
+
+      const results = await Promise.all(
+        Object.entries(queries).flatMap(([groupKey, groupQueries]) =>
+          Object.entries(groupQueries).map(async ([key, query]) => {
+            const result = await sequelize.query<{ total?: number; employee_count?: number }>(query, {
+              type: Sequelize.QueryTypes.SELECT,
+            });
+
+            // Validar la existencia de las claves esperadas
+            const value = result[0]?.total ?? result[0]?.employee_count;
+
+            if (value !== undefined) {
+              return { [`${groupKey}.${key}`]: value };
+            } else {
+              throw new Error(`Query for ${key} did not return a valid result.`);
+            }
+          })
+        )
+      );
+
+      // Combina los resultados en un solo objeto
+      const combinedResults = results.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+
+      // Agregar cálculo para earrings.attendance
+      const assistantTotal = combinedResults["assistant.total"] || 0;
+      const employeeActive = combinedResults["employee.active"] || 0;
+      combinedResults["earrings.attendance"] = Math.abs(assistantTotal - employeeActive);
+
+      return combinedResults;
+    } catch (error) {
+      console.error("Error fetching total dashboard report:", error);
+      throw error;
+    }
+  }
+
+  // Total de asistencias, ausencias y atrasos
+  public async getAttendanceSummaryByYear(year: string, month: string | null) {
+    try {
+      const query = `
+      SELECT
+          strftime('%Y-%m', ADDL.att_date) AS month,
+          COUNT(DISTINCT CASE WHEN ADDL.checkin IS NOT NULL THEN ADDL.employee_id || ADDL.att_date END) AS total_attendances,
+          COUNT(DISTINCT CASE WHEN ADDL.checkin IS NULL THEN ADDL.employee_id || ADDL.att_date END) AS total_absences,
+          COUNT(DISTINCT CASE
+                            WHEN ADDL.checkin IS NOT NULL AND ADDL.checkin > AST.shift_start THEN ADDL.employee_id || ADDL.att_date
+              END) AS total_late
+      FROM
+          att_day_details AS ADDL
+              LEFT JOIN hr_employee AS HE ON ADDL.employee_id = HE.id
+              LEFT JOIN att_shift AS AST ON AST.id = ADDL.shift_ID
+      WHERE 
+          strftime('%Y', ADDL.att_date) = :year
+          ${month ? `AND strftime('%m', ADDL.att_date) = :month` : ""}
+      GROUP BY
+          strftime('%Y-%m', ADDL.att_date)
+      ORDER BY
+          strftime('%Y-%m', ADDL.att_date);
+    `;
+
+      const replacements: { year: string; month?: string } = { year }; // Define reemplazos con tipo opcional
+      if (month) {
+        replacements.month = month.padStart(2, "0"); // Asegura formato MM
+      }
+
+      const results = await sequelize.query(query, {
+        replacements,
+        type: Sequelize.QueryTypes.SELECT,
+      });
+
+      return results;
+    } catch (error) {
+      console.error("Error fetching attendance summary by year:", error);
+      throw error;
+    }
+  }
+
+  // Obtener los datos de faltas por enfermedad y por vacaciones
+  public async getAbsencesByTypeByYear(year: string, month: string | null) {
+    try {
+      const query = `
+      SELECT 
+          strftime('%Y-%m', ADS.att_date) AS month,
+          COUNT(CASE WHEN APC.id = 12 THEN ADS.id END) AS sickness_absences,
+          COUNT(CASE WHEN APC.id = 11 THEN ADS.id END) AS vacation_absences
+      FROM 
+          att_day_summary AS ADS
+      LEFT JOIN att_paycode AS APC 
+          ON ADS.paycode_id = APC.id
+      WHERE 
+          strftime('%Y', ADS.att_date) = :year
+          ${month ? `AND strftime('%m', ADS.att_date) = :month` : ""}
+      GROUP BY 
+          strftime('%Y-%m', ADS.att_date)
+      ORDER BY 
+          strftime('%Y-%m', ADS.att_date);
+    `;
+
+      const replacements: { year: string; month?: string } = { year }; // Define reemplazos con tipo opcional
+      if (month) {
+        replacements.month = month.padStart(2, "0"); // Asegura formato MM
+      }
+
+      const results = await sequelize.query(query, {
+        replacements,
+        type: Sequelize.QueryTypes.SELECT,
+      });
+
+      return results;
+    } catch (error) {
+      console.error("Error fetching absences by type for year:", error);
+      throw error;
+    }
+  }
+
+
+
 }
