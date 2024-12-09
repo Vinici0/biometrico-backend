@@ -11,10 +11,12 @@ export interface EmployeeAttendance {
   Fecha: string;
   Entrada: string | null;
   Salida: string | null;
+  paycode_id: string | null;
   Departamento?: string;
   TotalHorasRedondeadas: number;
   DiaSemana: 'Domingo' | 'Lunes' | 'Martes' | 'Miércoles' | 'Jueves' | 'Viernes' | 'Sábado';
-  B?: 'B' | 'Z' | null;
+  TipoB?: string| null;
+  TipoZ?: string | null;
   Vacaciones: string | null;
 }
 

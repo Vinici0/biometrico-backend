@@ -223,7 +223,6 @@ const processEmployeeData = (
   daysArray: string[]
 ) => {
   const extraColumnsCount = 12; // Actualiza este valor según el número de columnas extra
-  const startingRowIndex = 8; // La fila donde empiezan los datos de empleados
 
   Object.values(data).forEach((employeeRecords, index) => {
     if (employeeRecords.length === 0) return;
@@ -242,7 +241,19 @@ const processEmployeeData = (
             format(date, "yyyy-MM-dd") === format(recordDate, "yyyy-MM-dd")
         );
         if (dayIndex >= 0) {
-          horasPorDia[dayIndex] = record.TotalHorasRedondeadas || "";
+          if (Number(record.paycode_id) === 12) {
+            // Si paycode_id es 12, coloca 'V' en la celda
+            horasPorDia[dayIndex] = "V";
+          } else if (record.TipoB === "B") {
+            // Si 'B' está presente en el registro, coloca 'B' en la celda
+            horasPorDia[dayIndex] = "B";
+          } else {
+            // De lo contrario, coloca 'TotalHorasRedondeadas' si está disponible
+            horasPorDia[dayIndex] =
+              record.TotalHorasRedondeadas !== null
+                ? record.TotalHorasRedondeadas.toString()
+                : "";
+          }
         }
       }
     });
@@ -251,7 +262,7 @@ const processEmployeeData = (
       index + 1, // 'N'
       empleado.Numero || "",
       empleado.Nombre,
-      empleado.Departamento,
+      empleado.Departamento || "",
       daysArray.length,
       ...horasPorDia,
       // Placeholders para columnas extra
@@ -259,7 +270,8 @@ const processEmployeeData = (
     ];
     const row = sheet.addRow(rowValues);
 
-    row.eachCell((cell) => {
+    // Aplicar estilos a la fila
+    row.eachCell((cell, colNumber) => {
       cell.alignment = { horizontal: "center", vertical: "middle" };
       cell.border = {
         top: { style: "thin" },
@@ -267,6 +279,28 @@ const processEmployeeData = (
         right: { style: "thin" },
         bottom: { style: "thin" },
       };
+
+      // Aplicar estilos según el valor de la celda
+      if (
+        colNumber > 5 && // Ajusta este índice según tu estructura
+        colNumber <= 5 + daysArray.length
+      ) {
+        if (cell.value === "B") {
+          // Pintar de amarillo si el valor es 'B'
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFFF00" }, // Color amarillo
+          };
+        } else if (cell.value === "V") {
+          // Pintar de verde si el valor es 'V'
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "C6EFCE" }, // Color verde claro
+          };
+        }
+      }
     });
   });
 };

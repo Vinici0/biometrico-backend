@@ -230,7 +230,7 @@ export class AttendanceService {
   }) {
     try {
       const query = `
-        WITH RECURSIVE dates AS (
+ WITH RECURSIVE dates AS (
             SELECT DATE(:startDate) AS att_date
             UNION ALL
             SELECT DATE(att_date, '+1 day')
@@ -240,6 +240,7 @@ export class AttendanceService {
         SELECT
             e.id,
             e.emp_code AS "Numero",
+            ea.paycode_id,
             e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
             d.att_date AS "Fecha",
             MIN(strftime('%H:%M', p.punch_time)) AS "Entrada",
@@ -258,9 +259,12 @@ export class AttendanceService {
             END AS "DiaSemana",
             CASE
                 WHEN COUNT(p.punch_time) = 1 THEN 'B'
+                ELSE NULL
+            END AS "TipoB",
+            CASE
                 WHEN COUNT(p.punch_time) = 0 THEN 'Z'
                 ELSE NULL
-            END AS "B",
+            END AS "TipoZ",
             CASE
                 WHEN pcd.pc_desc LIKE 'vacat%' THEN 'Si'
                 ELSE 'No'
@@ -272,6 +276,8 @@ export class AttendanceService {
             LEFT JOIN hr_department dp ON e.emp_dept = dp.id
             LEFT JOIN att_day_summary ds ON ds.employee_id = e.id AND d.att_date = ds.att_date
             LEFT JOIN att_paycode pcd ON pcd.id = ds.paycode_id
+            LEFT JOIN att_exceptionassign ea ON ea.employee_id = e.id
+
         GROUP BY
             e.id,
             d.att_date,
@@ -283,7 +289,7 @@ export class AttendanceService {
         ORDER BY
             d.att_date,
             e.emp_lastname,
-            e.emp_firstname; 
+            e.emp_firstname;
       `;
   
       // Ejecutar la consulta con reemplazos para startDate y endDate
