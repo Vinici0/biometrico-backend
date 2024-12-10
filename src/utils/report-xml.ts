@@ -4,24 +4,50 @@ import { es } from "date-fns/locale";
 import { AsistenciaData } from "../domain/interface/employee-attendance.interface";
 import { getMonthName } from "./getMonthName";
 
-const createHeader = (sheet: ExcelJS.Worksheet) => {
-  sheet.mergeCells("A1:AM1");
+
+function getExcelColumnLetter(columnNumber: number): string {
+  let columnLetter = '';
+  while (columnNumber > 0) {
+    let remainder = (columnNumber - 1) % 26;
+    columnLetter = String.fromCharCode(65 + remainder) + columnLetter;
+    columnNumber = Math.floor((columnNumber - 1) / 26);
+  }
+  return columnLetter;
+}
+
+const createHeader = (
+  sheet: ExcelJS.Worksheet,
+  totalColumns: number,
+  monthName: string
+) => {
+  // Obtener la letra de la última columna
+  const lastColumnLetter = getExcelColumnLetter(totalColumns + 5);
+
+  // Encabezado principal
+  sheet.mergeCells(`A1:${lastColumnLetter}1`);
   sheet.getCell("A1").value = "TALLER DE ESTRUCTURAS METÁLICAS";
   sheet.getCell("A1").alignment = { vertical: "middle", horizontal: "center" };
   sheet.getCell("A1").font = { size: 16, bold: true };
 
-  sheet.mergeCells("A2:AM2");
+  // Subtítulo
+  sheet.mergeCells(`A2:${lastColumnLetter}2`);
   sheet.getCell("A2").value = "CONTROL DE HORAS Y ASISTENCIA LABORAL";
   sheet.getCell("A2").alignment = { vertical: "middle", horizontal: "center" };
   sheet.getCell("A2").font = { size: 14, bold: true };
+
+  // Nombre del mes
+  sheet.mergeCells(`A3:${lastColumnLetter}3`);
+  sheet.getCell("A3").alignment = { vertical: "middle", horizontal: "center" };
+  sheet.getCell("A3").font = { size: 12, bold: true };
 };
+
 
 const createColumnHeaders = (
   sheet: ExcelJS.Worksheet,
   start: Date,
   daysArray: string[],
   weekdayArray: string[],
-  extraColumns: any[]
+  // extraColumns: any[]
 ) => {
   const startDayCol = 6; // Columna 'F'
   const endDayCol = startDayCol + daysArray.length - 1;
@@ -93,50 +119,51 @@ const createColumnHeaders = (
 
   // Manejo de columnas extra
   let colIndex = endDayCol + 1;
-  extraColumns.forEach((col) => {
-    const colSpan = col.span || 1;
-    const startCol = colIndex;
-    const endCol = colIndex + colSpan - 1;
+  // extraColumns.forEach((col) => {
+  //   const colSpan = col.span || 1;
+  //   const startCol = colIndex;
+  //   const endCol = colIndex + colSpan - 1;
 
-    if (colSpan > 1) {
-      // Fusionar horizontalmente en headerRow2Index
-      sheet.mergeCells(headerRow2Index, startCol, headerRow2Index, endCol);
-      sheet.getCell(headerRow2Index, startCol).value = col.header;
-      sheet.getCell(headerRow2Index, startCol).alignment = {
-        horizontal: "center",
-        vertical: "middle",
-      };
-      sheet.getCell(headerRow2Index, startCol).font = { bold: true };
-      // Subencabezados en la fila 3
-      for (let i = 0; i < colSpan; i++) {
-        const subHeaderCell = sheet.getCell(headerRow3Index, startCol + i);
-        subHeaderCell.value = col.subHeaders && col.subHeaders[i] ? col.subHeaders[i] : "";
-        subHeaderCell.alignment = { horizontal: "center", vertical: "middle" };
-        subHeaderCell.font = { bold: true };
-        subHeaderCell.border = {
-          top: { style: "thin" },
-          left: { style: "thin" },
-          right: { style: "thin" },
-          bottom: { style: "thin" },
-        };
-      }
-    } else {
-      // Fusionar verticalmente desde headerRow2Index a headerRow3Index
-      sheet.mergeCells(headerRow2Index, startCol, headerRow3Index, startCol);
-      const cell = sheet.getCell(headerRow2Index, startCol);
-      cell.value = col.header;
-      cell.alignment = { horizontal: "center", vertical: "middle" };
-      cell.font = { bold: true };
-      cell.border = {
-        top: { style: "thin" },
-        left: { style: "thin" },
-        right: { style: "thin" },
-        bottom: { style: "thin" },
-      };
-    }
+  //   if (colSpan > 1) {
+  //     // Fusionar horizontalmente en headerRow2Index
+  //     sheet.mergeCells(headerRow2Index, startCol, headerRow2Index, endCol);
+  //     sheet.getCell(headerRow2Index, startCol).value = col.header;
+  //     sheet.getCell(headerRow2Index, startCol).alignment = {
+  //       horizontal: "center",
+  //       vertical: "middle",
+  //     };
+  //     sheet.getCell(headerRow2Index, startCol).font = { bold: true };
+  //     // Subencabezados en la fila 3
+  //     for (let i = 0; i < colSpan; i++) {
+  //       const subHeaderCell = sheet.getCell(headerRow3Index, startCol + i);
+  //       subHeaderCell.value =
+  //         col.subHeaders && col.subHeaders[i] ? col.subHeaders[i] : "";
+  //       subHeaderCell.alignment = { horizontal: "center", vertical: "middle" };
+  //       subHeaderCell.font = { bold: true };
+  //       subHeaderCell.border = {
+  //         top: { style: "thin" },
+  //         left: { style: "thin" },
+  //         right: { style: "thin" },
+  //         bottom: { style: "thin" },
+  //       };
+  //     }
+  //   } else {
+  //     // Fusionar verticalmente desde headerRow2Index a headerRow3Index
+  //     sheet.mergeCells(headerRow2Index, startCol, headerRow3Index, startCol);
+  //     const cell = sheet.getCell(headerRow2Index, startCol);
+  //     cell.value = col.header;
+  //     cell.alignment = { horizontal: "center", vertical: "middle" };
+  //     cell.font = { bold: true };
+  //     cell.border = {
+  //       top: { style: "thin" },
+  //       left: { style: "thin" },
+  //       right: { style: "thin" },
+  //       bottom: { style: "thin" },
+  //     };
+  //   }
 
-    colIndex = endCol + 1;
-  });
+  //   colIndex = endCol + 1;
+  // });
 
   // Configurar anchos de columnas
   sheet.getColumn(1).width = 6; // 'N'
@@ -151,19 +178,19 @@ const createColumnHeaders = (
 
   // Configurar anchos de columnas adicionales
   colIndex = endDayCol + 1;
-  extraColumns.forEach((col) => {
-    for (let i = 0; i < col.span; i++) {
-      const currentCol = sheet.getColumn(colIndex);
-      if (
-        ["FALTAS", "SALIDAS", "VACACIÓN", "ENFERMEDAD"].includes(col.header)
-      ) {
-        currentCol.width = 8; // Ancho para columnas verticales
-      } else {
-        currentCol.width = 15; // Ancho estándar
-      }
-      colIndex++;
-    }
-  });
+  // extraColumns.forEach((col) => {
+  //   for (let i = 0; i < col.span; i++) {
+  //     const currentCol = sheet.getColumn(colIndex);
+  //     if (
+  //       ["FALTAS", "SALIDAS", "VACACIÓN", "ENFERMEDAD"].includes(col.header)
+  //     ) {
+  //       currentCol.width = 8; // Ancho para columnas verticales
+  //     } else {
+  //       currentCol.width = 15; // Ancho estándar
+  //     }
+  //     colIndex++;
+  //   }
+  // });
 };
 
 const styleHeaders = (sheet: ExcelJS.Worksheet) => {
@@ -215,7 +242,6 @@ const styleHeaders = (sheet: ExcelJS.Worksheet) => {
   });
 };
 
-
 const processEmployeeData = (
   sheet: ExcelJS.Worksheet,
   data: AsistenciaData,
@@ -241,13 +267,22 @@ const processEmployeeData = (
             format(date, "yyyy-MM-dd") === format(recordDate, "yyyy-MM-dd")
         );
         if (dayIndex >= 0) {
-          if (Number(record.paycode_id) === 12) {
+          //si es igual a 11 E es enfermedad
+          if (Number(record.PaycodeID) === 11) {
+            // Si paycode_id es 11, coloca 'E' en la celda
+            horasPorDia[dayIndex] = "E";
+          } else if (Number(record.PaycodeID) === 12) {
             // Si paycode_id es 12, coloca 'V' en la celda
             horasPorDia[dayIndex] = "V";
           } else if (record.TipoB === "B") {
             // Si 'B' está presente en el registro, coloca 'B' en la celda
             horasPorDia[dayIndex] = "B";
-          } else {
+          } 
+          else if (record.TipoZ === "Z") {
+            // Si 'Z' está presente en el registro, coloca 'Z' en la celda
+            horasPorDia[dayIndex] = "√";
+          }
+          else {
             // De lo contrario, coloca 'TotalHorasRedondeadas' si está disponible
             horasPorDia[dayIndex] =
               record.TotalHorasRedondeadas !== null
@@ -286,18 +321,34 @@ const processEmployeeData = (
         colNumber <= 5 + daysArray.length
       ) {
         if (cell.value === "B") {
-          // Pintar de amarillo si el valor es 'B'
           cell.fill = {
             type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "FFFF00" }, // Color amarillo
+            fgColor: { argb: "FFFFCC" }, // Color naranja
           };
-        } else if (cell.value === "V") {
-          // Pintar de verde si el valor es 'V'
+        } 
+        else if (cell.value === "√") {
+          // Pintar de azul si el valor es 'Z'
           cell.fill = {
             type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "C6EFCE" }, // Color verde claro
+            fgColor: { argb: "FFFFFF" }, // Color azul claro
+          };
+        }
+        else if (cell.value === "E") {
+          // Pintar de rojo si el valor es 'E'
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFC7CE" }, // Color rojo claro
+          };
+        }
+        else if (cell.value === "V") {
+
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFFF00" }, 
           };
         }
       }
@@ -322,7 +373,7 @@ export const createExcelReport = async (
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Asistencia");
 
-  createHeader(sheet);
+  createHeader(sheet, eachDayOfInterval({ start, end }).length, getMonthName(start.getMonth() + 1));
 
   const dateRange = eachDayOfInterval({ start, end });
   const daysArray = dateRange.map((date) => format(date, "d", { locale: es }));
@@ -330,32 +381,8 @@ export const createExcelReport = async (
     format(date, "EEEEE", { locale: es }).toUpperCase()
   );
 
-  // Obtener el nombre del mes
-  const monthName = getMonthName(start.getMonth() + 1);
 
-  const extraColumns = [
-    { header: "# HORAS EXTRAS", subHeaders: ["50%", "100%"], span: 2 },
-    { header: "BÁSICA", span: 1 },
-    { header: "SUELDO BÁSICO", span: 1 },
-    { header: "FALTAS", span: 1 },
-    { header: "SALIDAS", span: 1 },
-    { header: "VACACIÓN", span: 1 },
-    { header: "ENFERMEDAD", span: 1 },
-    {
-      header: "MONTO POR HORAS EXTRAS",
-      subHeaders: ["50%", "100%"],
-      span: 2,
-    },
-    { header: "SUBTOTAL", span: 1 },
-  ];
-
-  createColumnHeaders(
-    sheet,
-    start,
-    daysArray,
-    weekdayArray,
-    extraColumns,
-  );
+  createColumnHeaders(sheet, start, daysArray, weekdayArray);
 
   styleHeaders(sheet);
   processEmployeeData(sheet, data, dateRange, daysArray);

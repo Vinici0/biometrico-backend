@@ -1,7 +1,10 @@
 import Sequelize from "sequelize";
 import sequelize from "../config/database";
 import { createExcelReport } from "../utils/report-xml";
-import { AsistenciaData, EmployeeAttendance } from "../domain/interface/employee-attendance.interface";
+import {
+  AsistenciaData,
+  EmployeeAttendance,
+} from "../domain/interface/employee-attendance.interface";
 
 interface AttendanceSearchParams {
   name: string;
@@ -14,7 +17,7 @@ interface AttendanceSearchParams {
   employeeId: string;
 }
 export class AttendanceService {
-  constructor() { }
+  constructor() {}
 
   public async getMonthlyAttendanceReport(
     startDate = "",
@@ -223,91 +226,90 @@ export class AttendanceService {
     }
   }
 
-  //getMonthlyAttendanceReport
+  // getMonthlyAttendanceReport
   public async downloadMonthlyAttendanceReport({
     startDate = "2024-09-01",
     endDate = "2024-09-30",
+    department = null as string | null,
   }) {
     try {
       const query = `
- WITH RECURSIVE dates AS (
-            SELECT DATE(:startDate) AS att_date
-            UNION ALL
-            SELECT DATE(att_date, '+1 day')
-            FROM dates
-            WHERE att_date < DATE(:endDate)
-        )
-        SELECT
-            e.id,
-            e.emp_code AS "Numero",
-            ea.paycode_id,
-            e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
-            d.att_date AS "Fecha",
-            MIN(strftime('%H:%M', p.punch_time)) AS "Entrada",
-            MAX(strftime('%H:%M', p.punch_time)) AS "Salida",
-            dp.dept_name AS "Departamento",
-            ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) * 24) AS "TotalHorasRedondeadas",
-            CASE
-                strftime('%w', d.att_date)
-                    WHEN '0' THEN 'Domingo'
-                    WHEN '1' THEN 'Lunes'
-                    WHEN '2' THEN 'Martes'
-                    WHEN '3' THEN 'Miércoles'
-                    WHEN '4' THEN 'Jueves'
-                    WHEN '5' THEN 'Viernes'
-                    WHEN '6' THEN 'Sábado'
-            END AS "DiaSemana",
-            CASE
-                WHEN COUNT(p.punch_time) = 1 THEN 'B'
-                ELSE NULL
-            END AS "TipoB",
-            CASE
-                WHEN COUNT(p.punch_time) = 0 THEN 'Z'
-                ELSE NULL
-            END AS "TipoZ",
-            CASE
-                WHEN pcd.pc_desc LIKE 'vacat%' THEN 'Si'
-                ELSE 'No'
-            END AS "Vacaciones"
-        FROM
-            hr_employee e
-            CROSS JOIN dates d
-            LEFT JOIN att_punches p ON e.id = p.emp_id AND DATE(p.punch_time) = d.att_date
-            LEFT JOIN hr_department dp ON e.emp_dept = dp.id
-            LEFT JOIN att_day_summary ds ON ds.employee_id = e.id AND d.att_date = ds.att_date
-            LEFT JOIN att_paycode pcd ON pcd.id = ds.paycode_id
-            LEFT JOIN att_exceptionassign ea ON ea.employee_id = e.id
-
-        GROUP BY
-            e.id,
-            d.att_date,
-            e.emp_code,
-            e.emp_firstname,
-            e.emp_lastname,
-            dp.dept_name,
-            pcd.pc_desc
-        ORDER BY
-            d.att_date,
-            e.emp_lastname,
-            e.emp_firstname;
+          WITH RECURSIVE dates AS (
+              SELECT DATE(:startDate) AS att_date
+              UNION ALL
+              SELECT DATE(att_date, '+1 day')
+              FROM dates
+              WHERE att_date < DATE(:endDate)
+          )
+          SELECT
+              e.id AS "EmpleadoID",
+              e.emp_code AS "Numero",
+              e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
+              ea.paycode_id AS "PaycodeID",
+              d.att_date AS "Fecha",
+              e.emp_code AS "Numero",   
+              MIN(strftime('%H:%M', p.punch_time)) AS "Entrada",
+              MAX(strftime('%H:%M', p.punch_time)) AS "Salida",
+              dp.dept_name AS "Departamento",
+              ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) * 24) AS "TotalHorasRedondeadas",
+              CASE strftime('%w', d.att_date)
+                  WHEN '0' THEN 'Domingo'
+                  WHEN '1' THEN 'Lunes'
+                  WHEN '2' THEN 'Martes'
+                  WHEN '3' THEN 'Miércoles'
+                  WHEN '4' THEN 'Jueves'
+                  WHEN '5' THEN 'Viernes'
+                  WHEN '6' THEN 'Sábado'
+              END AS "DiaSemana",
+              CASE
+                  WHEN COUNT(p.punch_time) = 1 THEN 'B'
+                  ELSE NULL
+              END AS "TipoB",
+              CASE
+                  WHEN COUNT(p.punch_time) = 0 THEN 'Z'
+                  ELSE NULL
+              END AS "TipoZ",
+              CASE
+                  WHEN ea.paycode_id = 12 THEN 'Si'
+                  ELSE 'No'
+              END AS "Vacaciones",
+              CASE
+                  WHEN ea.paycode_id = 11 THEN 'Si'
+                  ELSE 'No'
+              END AS "Enfermedad"
+          FROM
+              hr_employee e
+              CROSS JOIN
+              dates d
+              LEFT JOIN
+              att_punches p ON e.id = p.emp_id AND DATE(p.punch_time) = d.att_date
+              LEFT JOIN
+              hr_department dp ON e.emp_dept = dp.id
+              LEFT JOIN
+              att_exceptionassign ea
+                  ON ea.employee_id = e.id
+                  AND DATE(ea.exception_date) = d.att_date
+          WHERE
+              (:department IS NULL OR dp.dept_name = :department)
+          GROUP BY
+              e.id, d.att_date, e.emp_firstname, e.emp_lastname, dp.dept_name, ea.paycode_id
+          ORDER BY
+              d.att_date, e.emp_lastname, e.emp_firstname;
       `;
 
-      // Ejecutar la consulta con reemplazos para startDate y endDate
-      const results = (await sequelize.query(
-        query,
-        {
-          replacements: { startDate, endDate },
-          type: Sequelize.QueryTypes.SELECT,
-        }
-      )) as EmployeeAttendance[];
+      // Ejecutar la consulta con reemplazos para startDate, endDate y department
+      const results = (await sequelize.query(query, {
+        replacements: { startDate, endDate, department },
+        type: Sequelize.QueryTypes.SELECT,
+      })) as EmployeeAttendance[];
 
       const employeeResults: AsistenciaData = {};
 
       results.forEach((result) => {
-        if (!employeeResults[result.id]) {
-          employeeResults[result.id] = [];
+        if (!employeeResults[result.EmpleadoID]) {
+          employeeResults[result.EmpleadoID] = [];
         }
-        employeeResults[result.id].push(result);
+        employeeResults[result.EmpleadoID].push(result);
       });
 
       const buffer = await createExcelReport(
@@ -321,8 +323,6 @@ export class AttendanceService {
       throw error;
     }
   }
-
-
 
   // ==========================================================
   // Métodos adicionales para el total conteo para dashboard
@@ -360,7 +360,10 @@ export class AttendanceService {
       const results = await Promise.all(
         Object.entries(queries).flatMap(([groupKey, groupQueries]) =>
           Object.entries(groupQueries).map(async ([key, query]) => {
-            const result = await sequelize.query<{ total?: number; employee_count?: number }>(query, {
+            const result = await sequelize.query<{
+              total?: number;
+              employee_count?: number;
+            }>(query, {
               type: Sequelize.QueryTypes.SELECT,
             });
 
@@ -370,19 +373,26 @@ export class AttendanceService {
             if (value !== undefined) {
               return { [`${groupKey}.${key}`]: value };
             } else {
-              throw new Error(`Query for ${key} did not return a valid result.`);
+              throw new Error(
+                `Query for ${key} did not return a valid result.`
+              );
             }
           })
         )
       );
 
       // Combina los resultados en un solo objeto
-      const combinedResults = results.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+      const combinedResults = results.reduce(
+        (acc, curr) => ({ ...acc, ...curr }),
+        {}
+      );
 
       // Agregar cálculo para earrings.attendance
       const assistantTotal = combinedResults["assistant.total"] || 0;
       const employeeActive = combinedResults["employee.active"] || 0;
-      combinedResults["earrings.attendance"] = Math.abs(assistantTotal - employeeActive);
+      combinedResults["earrings.attendance"] = Math.abs(
+        assistantTotal - employeeActive
+      );
 
       return combinedResults;
     } catch (error) {
@@ -473,7 +483,6 @@ export class AttendanceService {
   // Obtener todos los mepleados
   getAllEmployees() {
     try {
-
       const query = `
         SELECT HE.id, HE.emp_firstname, HE.emp_lastname, He.emp_email, HE.emp_dept, HD.id AS id_dept, HD.dept_name, HE.emp_active FROM hr_employee AS HE
         INNER JOIN hr_department AS HD ON HE.emp_dept = HD.id
@@ -484,18 +493,15 @@ export class AttendanceService {
       });
 
       return results;
-
     } catch (error) {
       console.error("Error fetching all employees:", error);
       throw error;
     }
-
   }
 
   // Obtener empleado por id
   getEmployeeById(id: string) {
     try {
-
       const query = `
         SELECT HE.emp_firstname, HE.emp_lastname, HE.emp_email, HE.emp_dept, HD.dept_name, HE.emp_active FROM hr_employee AS HE
         INNER JOIN hr_department AS HD ON HE.emp_dept = HD.id
@@ -508,7 +514,6 @@ export class AttendanceService {
       });
 
       return results;
-
     } catch (error) {
       console.error("Error fetching employee by id:", error);
       throw error;
@@ -518,14 +523,8 @@ export class AttendanceService {
   // Editar empleado por id
   updateEmployeeById(id: string, formData: any) {
     try {
-
-      const {
-        emp_firstname,
-        emp_lastname,
-        emp_email,
-        id_dept,
-        emp_active,
-      } = formData;
+      const { emp_firstname, emp_lastname, emp_email, id_dept, emp_active } =
+        formData;
 
       const query = `
         UPDATE hr_employee
@@ -539,23 +538,20 @@ export class AttendanceService {
           id = :id;
       `;
 
-      const results
-        = sequelize.query(query, {
-          replacements: {
-            emp_firstname,
-            emp_lastname,
-            emp_email,
-            id_dept,
-            emp_active,
-            id
-          },
-          type: Sequelize.QueryTypes.UPDATE,
-        });
+      const results = sequelize.query(query, {
+        replacements: {
+          emp_firstname,
+          emp_lastname,
+          emp_email,
+          id_dept,
+          emp_active,
+          id,
+        },
+        type: Sequelize.QueryTypes.UPDATE,
+      });
 
       return results;
-
     } catch (error) {
-
       console.error("Error updating employee:", error);
       throw error;
     }
@@ -564,7 +560,6 @@ export class AttendanceService {
   // Obtener todos los departamentos
   getAllDepartaments() {
     try {
-
       const query = `
         SELECT * FROM hr_department;
       `;
@@ -574,11 +569,9 @@ export class AttendanceService {
       });
 
       return results;
-
     } catch (error) {
       console.error("Error fetching all departaments:", error);
       throw error;
     }
   }
-
 }

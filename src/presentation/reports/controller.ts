@@ -4,7 +4,7 @@ import { HttpResponseHandler } from "../../domain/response/http-response-handler
 import { CustomError } from "../../domain/response/custom.error";
 
 export class AttendanceController {
-  constructor(public readonly categoryService: AttendanceService) { }
+  constructor(public readonly categoryService: AttendanceService) {}
 
   getMonthlyAttendanceReport: RequestHandler = (
     req: Request,
@@ -23,11 +23,29 @@ export class AttendanceController {
   };
 
   searchAttendance: RequestHandler = (req: Request, res: Response) => {
-    const { name, page, pageSize, startDate, endDate, department, status, employeeId } = req.body;
+    const {
+      name,
+      page,
+      pageSize,
+      startDate,
+      endDate,
+      department,
+      status,
+      employeeId,
+    } = req.body;
     console.log(startDate, endDate, page, pageSize);
 
     this.categoryService
-      .searchAttendance({ name, page, pageSize, startDate, endDate, department, status, employeeId })
+      .searchAttendance({
+        name,
+        page,
+        pageSize,
+        startDate,
+        endDate,
+        department,
+        status,
+        employeeId,
+      })
       .then((data) => {
         return HttpResponseHandler.success(res, data);
       })
@@ -41,14 +59,15 @@ export class AttendanceController {
     req: Request,
     res: Response
   ) => {
-
-    const { startDate, endDate } = req.query;
-
+    const { startDate, endDate, department } = req.query;
+    console.log(`Generando reporte desde ${startDate} hasta ${endDate} ${department}`);
+    
     try {
       const buffer = await this.categoryService.downloadMonthlyAttendanceReport(
         {
           startDate: startDate as string,
           endDate: endDate as string,
+          department: department as string | undefined || null,
         }
       );
 
@@ -83,7 +102,6 @@ export class AttendanceController {
     return HttpResponseHandler.error(res, error);
   };
 
-
   // =============================================================
   // Conteo total de dashboard
 
@@ -98,7 +116,6 @@ export class AttendanceController {
       });
   };
 
-
   // Total de asistencias, aucencias y atrasos en los ultimos 6 meces
   AttendanceSummary: RequestHandler = async (req, res) => {
     try {
@@ -106,7 +123,10 @@ export class AttendanceController {
       const month = req.params.month || null; // Mes opcional
 
       // Llamar al servicio con el año y el mes
-      const data = await this.categoryService.getAttendanceSummaryByYear(String(year), month ? month : null);
+      const data = await this.categoryService.getAttendanceSummaryByYear(
+        String(year),
+        month ? month : null
+      );
 
       // Enviar la respuesta
       res.status(200).json({
@@ -124,7 +144,6 @@ export class AttendanceController {
     }
   };
 
-
   // Obtener los datos de faltas por enfermedad y por vacaciones
   getAbsencesByType: RequestHandler = async (req, res) => {
     try {
@@ -132,7 +151,10 @@ export class AttendanceController {
       const month = req.params.month || null; // Mes opcional
 
       // Llamar al servicio con el año y el mes
-      const data = await this.categoryService.getAbsencesByTypeByYear(String(year), month ? month : null);
+      const data = await this.categoryService.getAbsencesByTypeByYear(
+        String(year),
+        month ? month : null
+      );
 
       res.status(200).json({
         success: true,
@@ -147,7 +169,6 @@ export class AttendanceController {
       });
     }
   };
-
 
   // Obtener todos los empleados
   getAllEmployees: RequestHandler = async (req, res) => {
@@ -166,7 +187,7 @@ export class AttendanceController {
         message: "Failed to fetch all employees",
       });
     }
-  }
+  };
 
   // Obtener empleado por id
   getIDEmployees: RequestHandler = async (req, res) => {
@@ -186,8 +207,7 @@ export class AttendanceController {
         message: "Failed to fetch employee",
       });
     }
-  }
-
+  };
 
   // Editar empleado por id
   updateEmployee: RequestHandler = async (req, res) => {
@@ -208,7 +228,7 @@ export class AttendanceController {
         message: "Failed to update employee",
       });
     }
-  }
+  };
 
   // Obtener todos los departamentos
   getAllDepartaments: RequestHandler = async (req, res) => {
@@ -227,5 +247,5 @@ export class AttendanceController {
         message: "Failed to fetch all departaments",
       });
     }
-  }
+  };
 }
