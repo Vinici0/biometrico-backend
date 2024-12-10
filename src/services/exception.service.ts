@@ -6,6 +6,7 @@ import Sequelize from "sequelize";
 import sequelize from "../config/database";
 import { TDocumentDefinitions } from "pdfmake/interfaces";
 import { resultsInit } from "../data/init";
+import ExcelJS from "exceljs";
 
 export interface ExceptionRecord {
   emp_pin: number;
@@ -36,7 +37,7 @@ export class ExceptionService {
   public async getExceptionReport(
     startDate: string = "2024-09-01",
     endDate: string = "2024-09-30"
-  ): Promise<Buffer> {
+  ): Promise<any> {
     try {
       // Datos de ejemplo
       const results = (await sequelize.query(
@@ -247,5 +248,104 @@ export class ExceptionService {
         reject(error);
       }
     });
+  }
+
+  public async getExceptionReportExcel(
+    startDate: string = "2024-09-01",
+    endDate: string = "2024-09-30"
+  ): Promise<ExcelJS.Workbook> {
+    try {
+      // Obtener los datos
+      const results = (await sequelize.query(
+        `
+        SELECT
+          HE.emp_pin AS emp_pin,
+          HE.emp_firstname AS emp_firstname,
+          HE.emp_lastname AS emp_lastname,
+          AEA.exception_date AS exception_date,
+          AEA.starttime AS starttime,
+          AEA.endtime AS endtime,
+          ROUND((julianday(AEA.endtime) - julianday(AEA.starttime)) * 24, 2) AS total_horas_excepcion,
+          CASE
+              WHEN AP.pc_desc LIKE '%vacation%' THEN 'Vacaciones'
+              WHEN AP.pc_desc LIKE '%sick%' THEN 'Enfermedad'
+              ELSE AP.pc_desc
+          END AS tipo_de_excepcion
+        FROM
+          att_paycode AP
+        INNER JOIN
+          att_exceptionassign AEA ON AP.id = AEA.paycode_id
+        INNER JOIN
+          hr_employee HE ON AEA.employee_id = HE.id
+        WHERE
+          AEA.exception_date BETWEEN :startDate AND :endDate
+          AND HE.emp_active = 1
+        ORDER BY
+          HE.emp_pin;
+        `,
+        {
+          replacements: { startDate, endDate },
+          type: Sequelize.QueryTypes.SELECT,
+        }
+      )) as ExceptionRecord[];
+
+      // Filtrar los resultados por rango de fechas si se proporcionan
+      const filteredResults = this.filterResultsByDate(
+        results,
+        startDate,
+        endDate
+      );
+
+      // Crear el workbook y el worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Reporte de Excepciones");
+
+      // Definir las columnas
+      worksheet.columns = [
+        { header: "ID", key: "emp_pin", width: 10 },
+        { header: "Nombre", key: "nombre", width: 30 },
+        { header: "Fecha", key: "exception_date", width: 15 },
+        { header: "Hora Inicio", key: "starttime", width: 15 },
+        { header: "Hora Fin", key: "endtime", width: 15 },
+        {
+          header: "Horas de Excepción",
+          key: "total_horas_excepcion",
+          width: 20,
+        },
+        { header: "Tipo de Excepción", key: "tipo_de_excepcion", width: 20 },
+      ];
+
+      // Agregar los datos
+      filteredResults.forEach((record) => {
+        worksheet.addRow({
+          emp_pin: record.emp_pin,
+          nombre: `${record.emp_firstname} ${record.emp_lastname}`,
+          exception_date: new Date(record.exception_date).toLocaleDateString(
+            "es-ES"
+          ),
+          starttime: new Date(record.starttime).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }),
+          endtime: new Date(record.endtime).toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+          }),
+          total_horas_excepcion: record.total_horas_excepcion,
+          tipo_de_excepcion: record.tipo_de_excepcion,
+        });
+      });
+
+      // Estilos opcionales
+      worksheet.getRow(1).font = { bold: true }; // Encabezados en negrita
+
+      // Retornar el workbook
+      return workbook;
+    } catch (error) {
+      console.error("Error generando el reporte de Excel:", error);
+      throw error;
+    }
   }
 }

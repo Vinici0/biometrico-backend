@@ -11,6 +11,7 @@ export class ExceptionRoutes {
     const exceptionController = new ExceptionController(exceptionService);
 
     router.get("/exception-report", exceptionController.getExceptionReport);
+    router.get("/exception-report-excel", exceptionController.getExceptionReportExcel);
 
     return router;
   }
