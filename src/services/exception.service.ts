@@ -2,6 +2,8 @@
 
 import PdfPrinter from "pdfmake";
 import path from "path";
+import Sequelize from "sequelize";
+import sequelize from "../config/database";
 import { TDocumentDefinitions } from "pdfmake/interfaces";
 import { resultsInit } from "../data/init";
 
@@ -32,12 +34,44 @@ export class ExceptionService {
   }
 
   public async getExceptionReport(
-    startDate: string = "",
-    endDate: string = ""
+    startDate: string = "2024-09-01",
+    endDate: string = "2024-09-30"
   ): Promise<Buffer> {
     try {
       // Datos de ejemplo
-      const results: ExceptionRecord[] = resultsInit;
+      const results = (await sequelize.query(
+        ` 
+            SELECT
+          HE.emp_pin AS emp_pin,
+          HE.emp_firstname AS emp_firstname,
+          HE.emp_lastname AS emp_lastname,
+          AEA.exception_date AS exception_date,
+          AEA.starttime AS starttime,
+          AEA.endtime AS endtime,
+          ROUND((julianday(AEA.endtime) - julianday(AEA.starttime)) * 24, 2) AS total_horas_excepcion,
+          CASE
+              WHEN AP.pc_desc LIKE '%vacation%' THEN 'Vacaciones'
+              WHEN AP.pc_desc LIKE '%sick%' THEN 'Enfermedad'
+              ELSE AP.pc_desc
+          END AS tipo_de_excepcion
+      FROM
+          att_paycode AP
+      INNER JOIN
+          att_exceptionassign AEA ON AP.id = AEA.paycode_id
+      INNER JOIN
+          hr_employee HE ON AEA.employee_id = HE.id
+      WHERE
+          AEA.exception_date BETWEEN :startDate AND :endDate
+          AND HE.emp_active = 1
+      ORDER BY
+          HE.emp_pin;
+
+        `,
+        {
+          replacements: { startDate, endDate },
+          type: Sequelize.QueryTypes.SELECT,
+        }
+      )) as ExceptionRecord[];
 
       // Filtrar los resultados por rango de fechas si se proporcionan
       const filteredResults = this.filterResultsByDate(
@@ -73,13 +107,32 @@ export class ExceptionService {
     });
   }
 
-  private generateExceptionReport(data: ExceptionRecord[]): TDocumentDefinitions {
+  private generateExceptionReport(
+    data: ExceptionRecord[]
+  ): TDocumentDefinitions {
     const formattedData = data.map((item) => [
       { text: item.emp_pin.toString(), alignment: "center" },
       { text: `${item.emp_firstname} ${item.emp_lastname}`, alignment: "left" },
-      { text: new Date(item.exception_date).toLocaleDateString("es-ES"), alignment: "center" },
-      { text: new Date(item.starttime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }), alignment: "center" },
-      { text: new Date(item.endtime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }), alignment: "center" },
+      {
+        text: new Date(item.exception_date).toLocaleDateString("es-ES"),
+        alignment: "center",
+      },
+      {
+        text: new Date(item.starttime).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }),
+        alignment: "center",
+      },
+      {
+        text: new Date(item.endtime).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: false,
+        }),
+        alignment: "center",
+      },
       { text: item.total_horas_excepcion.toString(), alignment: "center" },
       { text: item.tipo_de_excepcion, alignment: "center" },
     ]);
