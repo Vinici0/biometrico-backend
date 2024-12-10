@@ -104,10 +104,10 @@ export class AttendanceController {
     try {
       const year = req.params.year;
       const month = req.params.month || null; // Mes opcional
-  
+
       // Llamar al servicio con el año y el mes
       const data = await this.categoryService.getAttendanceSummaryByYear(String(year), month ? month : null);
-  
+
       // Enviar la respuesta
       res.status(200).json({
         success: true,
@@ -124,16 +124,16 @@ export class AttendanceController {
     }
   };
 
-  
+
   // Obtener los datos de faltas por enfermedad y por vacaciones
   getAbsencesByType: RequestHandler = async (req, res) => {
     try {
       const year = req.params.year;
       const month = req.params.month || null; // Mes opcional
-  
+
       // Llamar al servicio con el año y el mes
       const data = await this.categoryService.getAbsencesByTypeByYear(String(year), month ? month : null);
-  
+
       res.status(200).json({
         success: true,
         data,
@@ -148,4 +148,84 @@ export class AttendanceController {
     }
   };
 
+
+  // Obtener todos los empleados
+  getAllEmployees: RequestHandler = async (req, res) => {
+    try {
+      const data = await this.categoryService.getAllEmployees();
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error("Error in getAllEmployees:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch all employees",
+      });
+    }
+  }
+
+  // Obtener empleado por id
+  getIDEmployees: RequestHandler = async (req, res) => {
+    try {
+      const id = req.params.id;
+      const data = await this.categoryService.getEmployeeById(id);
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error("Error in getIDEmployees:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch employee",
+      });
+    }
+  }
+
+
+  // Editar empleado por id
+  updateEmployee: RequestHandler = async (req, res) => {
+    try {
+      const id = req.params.id;
+      const formData = req.body;
+      const data = await this.categoryService.updateEmployeeById(id, formData);
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error("Error in updateEmployee:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to update employee",
+      });
+    }
+  }
+
+  // Obtener todos los departamentos
+  getAllDepartaments: RequestHandler = async (req, res) => {
+    try {
+      const data = await this.categoryService.getAllDepartaments();
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error("Error in getAllDepartaments:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch all departaments",
+      });
+    }
+  }
 }
