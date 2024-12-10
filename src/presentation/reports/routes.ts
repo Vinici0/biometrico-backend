@@ -61,6 +61,11 @@ export class AttendanceRoutes {
       attendanceController.getAllDepartaments
     );
 
+    router.get(
+      "/all-vacations",
+      attendanceController.getAllVacations
+    );
+
     return router;
   }
 }

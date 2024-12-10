@@ -355,6 +355,16 @@ export class AttendanceService {
             WHERE HE.emp_dept = 5 AND DATE(ADDL.checkin) = CURRENT_DATE;
           `,
         },
+        vacation: {
+          total: `
+            SELECT COUNT(*) AS total
+            FROM att_paycode AP
+            INNER JOIN att_exceptionassign AEA ON AP.id = AEA.paycode_id
+            INNER JOIN hr_employee HE ON AEA.employee_id = HE.id
+            WHERE DATE(AEA.exception_date) = CURRENT_DATE
+            AND HE.emp_active = 1;
+          `,
+        },
       };
 
       const results = await Promise.all(
@@ -391,33 +401,37 @@ export class AttendanceService {
     }
   }
 
+
   // Total de asistencias, ausencias y atrasos
   public async getAttendanceSummaryByYear(year: string, month: string | null) {
     try {
       const query = `
       SELECT
+          HE.emp_dept AS department,
           strftime('%Y-%m', ADDL.att_date) AS month,
           COUNT(DISTINCT CASE WHEN ADDL.checkin IS NOT NULL THEN ADDL.employee_id || ADDL.att_date END) AS total_attendances,
           COUNT(DISTINCT CASE WHEN ADDL.checkin IS NULL THEN ADDL.employee_id || ADDL.att_date END) AS total_absences,
           COUNT(DISTINCT CASE
                             WHEN ADDL.checkin IS NOT NULL AND ADDL.checkin > AST.shift_start THEN ADDL.employee_id || ADDL.att_date
-              END) AS total_late
+          END) AS total_late
       FROM
           att_day_details AS ADDL
-              LEFT JOIN hr_employee AS HE ON ADDL.employee_id = HE.id
-              LEFT JOIN att_shift AS AST ON AST.id = ADDL.shift_ID
+          LEFT JOIN hr_employee AS HE ON ADDL.employee_id = HE.id
+          LEFT JOIN att_shift AS AST ON AST.id = ADDL.shift_ID
       WHERE 
           strftime('%Y', ADDL.att_date) = :year
           ${month ? `AND strftime('%m', ADDL.att_date) = :month` : ""}
       GROUP BY
+          HE.emp_dept,
           strftime('%Y-%m', ADDL.att_date)
       ORDER BY
+          HE.emp_dept,
           strftime('%Y-%m', ADDL.att_date);
-    `;
+      `;
 
-      const replacements: { year: string; month?: string } = { year }; // Define reemplazos con tipo opcional
+      const replacements: { year: string; month?: string } = { year };
       if (month) {
-        replacements.month = month.padStart(2, "0"); // Asegura formato MM
+        replacements.month = month.padStart(2, "0");
       }
 
       const results = await sequelize.query(query, {
@@ -427,16 +441,18 @@ export class AttendanceService {
 
       return results;
     } catch (error) {
-      console.error("Error fetching attendance summary by year:", error);
+      console.error("Error fetching attendance summary by year and department:", error);
       throw error;
     }
   }
+
 
   // Obtener los datos de faltas por enfermedad y por vacaciones
   public async getAbsencesByTypeByYear(year: string, month: string | null) {
     try {
       const query = `
       SELECT 
+          HE.emp_dept AS department,
           strftime('%Y-%m', ADS.att_date) AS month,
           COUNT(CASE WHEN APC.id = 12 THEN ADS.id END) AS sickness_absences,
           COUNT(CASE WHEN APC.id = 11 THEN ADS.id END) AS vacation_absences
@@ -444,12 +460,16 @@ export class AttendanceService {
           att_day_summary AS ADS
       LEFT JOIN att_paycode AS APC 
           ON ADS.paycode_id = APC.id
+      LEFT JOIN hr_employee AS HE 
+          ON ADS.employee_id = HE.id
       WHERE 
           strftime('%Y', ADS.att_date) = :year
           ${month ? `AND strftime('%m', ADS.att_date) = :month` : ""}
       GROUP BY 
+          HE.emp_dept,
           strftime('%Y-%m', ADS.att_date)
       ORDER BY 
+          HE.emp_dept,
           strftime('%Y-%m', ADS.att_date);
     `;
 
@@ -577,6 +597,48 @@ export class AttendanceService {
 
     } catch (error) {
       console.error("Error fetching all departaments:", error);
+      throw error;
+    }
+  }
+
+  // Obtener todos los registros de vacaciones
+  getAllVacations() {
+    try {
+      const query = `
+          SELECT
+              HE.emp_pin AS emp_pin,
+              HE.emp_firstname AS emp_firstname,
+              HE.emp_lastname AS emp_lastname,
+              AEA.exception_date AS exception_date,
+              AEA.starttime AS starttime,
+              AEA.endtime AS endtime,
+              ROUND((julianday(AEA.endtime) - julianday(AEA.starttime)) * 24, 2) AS total_horas_excepcion,
+              CASE
+                  WHEN AP.pc_desc LIKE '%vacation%' THEN 'Vacaciones'
+                  WHEN AP.pc_desc LIKE '%sick%' THEN 'Enfermedad'
+                  ELSE AP.pc_desc
+                  END AS tipo_de_excepcion
+          FROM
+              att_paycode AP
+                  INNER JOIN
+              att_exceptionassign AEA ON AP.id = AEA.paycode_id
+                  INNER JOIN
+              hr_employee HE ON AEA.employee_id = HE.id
+          WHERE
+            DATE(AEA.exception_date) = CURRENT_DATE
+            AND HE.emp_active = 1
+          ORDER BY
+              HE.emp_pin;
+      `;
+
+      const results = sequelize.query(query, {
+        type: Sequelize.QueryTypes.SELECT,
+      });
+
+      return results;
+
+    } catch (error) {
+      console.error("Error fetching all vacations:", error);
       throw error;
     }
   }
