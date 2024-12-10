@@ -25,6 +25,22 @@ export class AttendanceRoutes {
       attendanceController.downloadMonthlyAttendanceReport
     );
 
+
+    router.get(
+      "/total-dashboard",
+      attendanceController.totalDashboardReport
+    );
+
+    router.get(
+      "/attendance-summary/:year/:month?",
+      attendanceController.AttendanceSummary
+    );
+
+    router.get(
+      "/absences-by-type/:year/:month?",
+      attendanceController.getAbsencesByType
+    );
+
     return router;
   }
 }

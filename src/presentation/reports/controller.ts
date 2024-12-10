@@ -4,14 +4,14 @@ import { HttpResponseHandler } from "../../domain/response/http-response-handler
 import { CustomError } from "../../domain/response/custom.error";
 
 export class AttendanceController {
-  constructor(public readonly categoryService: AttendanceService) {}
+  constructor(public readonly categoryService: AttendanceService) { }
 
   getMonthlyAttendanceReport: RequestHandler = (
     req: Request,
     res: Response
   ) => {
     const { startDate, endDate, page, pageSize } = req.body;
-    
+
     this.categoryService
       .getMonthlyAttendanceReport(startDate, endDate, page, pageSize)
       .then((data) => {
@@ -42,13 +42,13 @@ export class AttendanceController {
     res: Response
   ) => {
 
-    const { startDate , endDate  } = req.query;
-    
+    const { startDate, endDate } = req.query;
+
     try {
       const buffer = await this.categoryService.downloadMonthlyAttendanceReport(
         {
           startDate: startDate as string,
-          endDate: endDate as string, 
+          endDate: endDate as string,
         }
       );
 
@@ -82,4 +82,70 @@ export class AttendanceController {
     console.log(`${error}`);
     return HttpResponseHandler.error(res, error);
   };
+
+
+  // =============================================================
+  // Conteo total de dashboard
+
+  totalDashboardReport: RequestHandler = (req: Request, res: Response) => {
+    this.categoryService
+      .totalDashboardReport()
+      .then((data) => {
+        return HttpResponseHandler.success(res, data);
+      })
+      .catch((error) => {
+        return this.handleError(error, res);
+      });
+  };
+
+
+  // Total de asistencias, aucencias y atrasos en los ultimos 6 meces
+  AttendanceSummary: RequestHandler = async (req, res) => {
+    try {
+      const year = req.params.year;
+      const month = req.params.month || null; // Mes opcional
+  
+      // Llamar al servicio con el año y el mes
+      const data = await this.categoryService.getAttendanceSummaryByYear(String(year), month ? month : null);
+  
+      // Enviar la respuesta
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error("Error in getAttendanceSummary:", error);
+
+      // Manejar errores enviando la respuesta de error
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch attendance summary",
+      });
+    }
+  };
+
+  
+  // Obtener los datos de faltas por enfermedad y por vacaciones
+  getAbsencesByType: RequestHandler = async (req, res) => {
+    try {
+      const year = req.params.year;
+      const month = req.params.month || null; // Mes opcional
+  
+      // Llamar al servicio con el año y el mes
+      const data = await this.categoryService.getAbsencesByTypeByYear(String(year), month ? month : null);
+  
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error("Error in getAbsencesByType:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch absences by type",
+      });
+    }
+  };
+
 }
