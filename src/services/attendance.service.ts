@@ -470,6 +470,115 @@ export class AttendanceService {
     }
   }
 
+  // Obtener todos los mepleados
+  getAllEmployees() {
+    try {
 
+      const query = `
+        SELECT HE.id, HE.emp_firstname, HE.emp_lastname, He.emp_email, HE.emp_dept, HD.id AS id_dept, HD.dept_name, HE.emp_active FROM hr_employee AS HE
+        INNER JOIN hr_department AS HD ON HE.emp_dept = HD.id
+      `;
+
+      const results = sequelize.query(query, {
+        type: Sequelize.QueryTypes.SELECT,
+      });
+
+      return results;
+
+    } catch (error) {
+      console.error("Error fetching all employees:", error);
+      throw error;
+    }
+
+  }
+
+  // Obtener empleado por id
+  getEmployeeById(id: string) {
+    try {
+
+      const query = `
+        SELECT HE.emp_firstname, HE.emp_lastname, HE.emp_email, HE.emp_dept, HD.dept_name, HE.emp_active FROM hr_employee AS HE
+        INNER JOIN hr_department AS HD ON HE.emp_dept = HD.id
+        WHERE HE.id = :id;
+      `;
+
+      const results = sequelize.query(query, {
+        replacements: { id },
+        type: Sequelize.QueryTypes.SELECT,
+      });
+
+      return results;
+
+    } catch (error) {
+      console.error("Error fetching employee by id:", error);
+      throw error;
+    }
+  }
+
+  // Editar empleado por id
+  updateEmployeeById(id: string, formData: any) {
+    try {
+
+      const {
+        emp_firstname,
+        emp_lastname,
+        emp_email,
+        id_dept,
+        emp_active,
+      } = formData;
+
+      const query = `
+        UPDATE hr_employee
+          SET 
+            emp_firstname = :emp_firstname,
+            emp_lastname = :emp_lastname,
+            emp_email = :emp_email,
+            emp_dept = :id_dept,
+            emp_active = :emp_active
+        WHERE 
+          id = :id;
+      `;
+
+      const results
+        = sequelize.query(query, {
+          replacements: {
+            emp_firstname,
+            emp_lastname,
+            emp_email,
+            id_dept,
+            emp_active,
+            id
+          },
+          type: Sequelize.QueryTypes.UPDATE,
+        });
+
+      return results;
+
+    } catch (error) {
+
+      console.error("Error updating employee:", error);
+      throw error;
+    }
+  }
+
+  // Obtener todos los departamentos
+  getAllDepartaments() {
+    try {
+
+      const query = `
+        SELECT * FROM hr_department;
+      `;
+
+      const results = sequelize.query(query, {
+        type: Sequelize.QueryTypes.SELECT,
+      });
+
+      return results;
+
+    } catch (error) {
+      console.error("Error fetching all departaments:", error);
+      throw error;
+    }
+  }
 
 }

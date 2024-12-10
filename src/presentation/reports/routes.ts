@@ -41,6 +41,26 @@ export class AttendanceRoutes {
       attendanceController.getAbsencesByType
     );
 
+    router.get(
+      "/all-employees",
+      attendanceController.getAllEmployees
+    );
+
+    router.get(
+      "/id-employee/:id",
+      attendanceController.getIDEmployees
+    );
+
+    router.put(
+      "/edit-employee/:id",
+      attendanceController.updateEmployee
+    );
+
+    router.get(
+      "/all-departaments",
+      attendanceController.getAllDepartaments
+    );
+
     return router;
   }
 }
