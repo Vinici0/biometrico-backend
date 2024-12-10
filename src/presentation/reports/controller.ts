@@ -247,5 +247,24 @@ export class AttendanceController {
         message: "Failed to fetch all departaments",
       });
     }
-  };
+  }
+
+  // Obtener empleados con vacaciones
+  getAllVacations: RequestHandler = async (req, res) => {
+    try {
+      const data = await this.categoryService.getAllVacations();
+
+      res.status(200).json({
+        success: true,
+        data,
+      });
+    } catch (error) {
+      console.error("Error in getAllVacations:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Failed to fetch all vacations",
+      });
+    }
+  }
 }
