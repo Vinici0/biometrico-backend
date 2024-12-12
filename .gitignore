@@ -52,3 +52,6 @@ jest/
 *.test.js
 *.spec.js
 coverage/
+
+# Build output
+dist/

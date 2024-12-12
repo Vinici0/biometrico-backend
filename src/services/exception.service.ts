@@ -23,17 +23,19 @@ export class ExceptionService {
   private printer: PdfPrinter;
 
   constructor() {
-    // Definir las fuentes
+    // Definir la ruta relativa a la carpeta de fuentes
+    const fontsPath = path.join(__dirname, "..", "fonts/fonts");
+
+    // Inicializar PdfPrinter con las rutas de las fuentes
     this.printer = new PdfPrinter({
       Roboto: {
-        normal: path.join(__dirname, "../fonts/Roboto-Regular.ttf"),
-        bold: path.join(__dirname, "../fonts/Roboto-Medium.ttf"),
-        italics: path.join(__dirname, "../fonts/Roboto-Italic.ttf"),
-        bolditalics: path.join(__dirname, "../fonts/Roboto-MediumItalic.ttf"),
+        normal: path.join(fontsPath, "Roboto-Regular.ttf"),
+        bold: path.join(fontsPath, "Roboto-Regular.ttf"),
+        italics: path.join(fontsPath, "Roboto-Italic.ttf"),
+        bolditalics: path.join(fontsPath, "Roboto-MediumItalic.ttf"),
       },
     });
   }
-
   public async getExceptionReport(
     startDate: string = "2024-09-01",
     endDate: string = "2024-09-30"
@@ -146,7 +148,7 @@ export class ExceptionService {
           return {
             columns: [
               {
-                image: path.join(__dirname, "../assets/logo.png"),
+                image: path.join(__dirname, "../assets/assets/logo.png"),
                 width: 70,
                 margin: [40, 20, 0, 20],
               },
