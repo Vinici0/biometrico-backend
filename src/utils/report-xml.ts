@@ -117,53 +117,7 @@ const createColumnHeaders = (
     };
   }
 
-  // Manejo de columnas extra
   let colIndex = endDayCol + 1;
-  // extraColumns.forEach((col) => {
-  //   const colSpan = col.span || 1;
-  //   const startCol = colIndex;
-  //   const endCol = colIndex + colSpan - 1;
-
-  //   if (colSpan > 1) {
-  //     // Fusionar horizontalmente en headerRow2Index
-  //     sheet.mergeCells(headerRow2Index, startCol, headerRow2Index, endCol);
-  //     sheet.getCell(headerRow2Index, startCol).value = col.header;
-  //     sheet.getCell(headerRow2Index, startCol).alignment = {
-  //       horizontal: "center",
-  //       vertical: "middle",
-  //     };
-  //     sheet.getCell(headerRow2Index, startCol).font = { bold: true };
-  //     // Subencabezados en la fila 3
-  //     for (let i = 0; i < colSpan; i++) {
-  //       const subHeaderCell = sheet.getCell(headerRow3Index, startCol + i);
-  //       subHeaderCell.value =
-  //         col.subHeaders && col.subHeaders[i] ? col.subHeaders[i] : "";
-  //       subHeaderCell.alignment = { horizontal: "center", vertical: "middle" };
-  //       subHeaderCell.font = { bold: true };
-  //       subHeaderCell.border = {
-  //         top: { style: "thin" },
-  //         left: { style: "thin" },
-  //         right: { style: "thin" },
-  //         bottom: { style: "thin" },
-  //       };
-  //     }
-  //   } else {
-  //     // Fusionar verticalmente desde headerRow2Index a headerRow3Index
-  //     sheet.mergeCells(headerRow2Index, startCol, headerRow3Index, startCol);
-  //     const cell = sheet.getCell(headerRow2Index, startCol);
-  //     cell.value = col.header;
-  //     cell.alignment = { horizontal: "center", vertical: "middle" };
-  //     cell.font = { bold: true };
-  //     cell.border = {
-  //       top: { style: "thin" },
-  //       left: { style: "thin" },
-  //       right: { style: "thin" },
-  //       bottom: { style: "thin" },
-  //     };
-  //   }
-
-  //   colIndex = endCol + 1;
-  // });
 
   // Configurar anchos de columnas
   sheet.getColumn(1).width = 6; // 'N'
@@ -173,24 +127,10 @@ const createColumnHeaders = (
   sheet.getColumn(5).width = 8; // 'DÍAS'
 
   for (let i = startDayCol; i <= endDayCol; i++) {
-    sheet.getColumn(i).width = 3; // Columnas de días
+    sheet.getColumn(i).width = 3; 
   }
 
-  // Configurar anchos de columnas adicionales
   colIndex = endDayCol + 1;
-  // extraColumns.forEach((col) => {
-  //   for (let i = 0; i < col.span; i++) {
-  //     const currentCol = sheet.getColumn(colIndex);
-  //     if (
-  //       ["FALTAS", "SALIDAS", "VACACIÓN", "ENFERMEDAD"].includes(col.header)
-  //     ) {
-  //       currentCol.width = 8; // Ancho para columnas verticales
-  //     } else {
-  //       currentCol.width = 15; // Ancho estándar
-  //     }
-  //     colIndex++;
-  //   }
-  // });
 };
 
 const styleHeaders = (sheet: ExcelJS.Worksheet) => {
@@ -274,13 +214,17 @@ const processEmployeeData = (
           } else if (Number(record.PaycodeID) === 12) {
             // Si paycode_id es 12, coloca 'V' en la celda
             horasPorDia[dayIndex] = "V";
-          } else if (record.TipoB === "B") {
+          } else if (record.HI === "HI") {
             // Si 'B' está presente en el registro, coloca 'B' en la celda
-            horasPorDia[dayIndex] = "B";
+            horasPorDia[dayIndex] = "HI";
+          } 
+          else if (record.HI === "HS") {
+            // Si 'B' está presente en el registro, coloca 'B' en la celda
+            horasPorDia[dayIndex] = "HS";
           } 
           else if (record.TipoZ === "Z") {
             // Si 'Z' está presente en el registro, coloca 'Z' en la celda
-            horasPorDia[dayIndex] = "√";
+            horasPorDia[dayIndex] = "F";
           }
           else {
             // De lo contrario, coloca 'TotalHorasRedondeadas' si está disponible
@@ -320,13 +264,20 @@ const processEmployeeData = (
         colNumber > 5 && // Ajusta este índice según tu estructura
         colNumber <= 5 + daysArray.length
       ) {
-        if (cell.value === "B") {
+        if (cell.value === "HI") {
           cell.fill = {
             type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "FFFFCC" }, // Color naranja
+            fgColor: { argb: "FFFFFF" }, // Color naranja
           };
         } 
+        else if (cell.value === "HS") {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFD966" }, // Color amarillo
+          };
+        }
         else if (cell.value === "√") {
           // Pintar de azul si el valor es 'Z'
           cell.fill = {

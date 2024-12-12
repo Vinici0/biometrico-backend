@@ -2,6 +2,7 @@ import { Request, Response, RequestHandler } from "express";
 import { AttendanceService } from "../../services/attendance.service";
 import { HttpResponseHandler } from "../../domain/response/http-response-handler";
 import { CustomError } from "../../domain/response/custom.error";
+import { format } from "date-fns";
 
 export class AttendanceController {
   constructor(public readonly categoryService: AttendanceService) {}
@@ -60,16 +61,20 @@ export class AttendanceController {
     res: Response
   ) => {
     const { startDate, endDate, department } = req.query;
-    console.log(`Generando reporte desde ${startDate} hasta ${endDate} ${department}`);
-    
+    console.log(
+      `Generando reporte desde ${startDate} hasta ${endDate} ${department}`
+    );
+
     try {
       const buffer = await this.categoryService.downloadMonthlyAttendanceReport(
         {
           startDate: startDate as string,
           endDate: endDate as string,
-          department: department as string | undefined || null,
+          department: (department as string | undefined) || null,
         }
       );
+
+      const currentDate = format(new Date(), "yyyy-MM-dd");
 
       // Configura los encabezados de la respuesta para forzar la descarga
       res.setHeader(
@@ -78,7 +83,7 @@ export class AttendanceController {
       );
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="ReporteAsistencia_Firma.xlsx"`
+        `attachment; filename="ReporteAsistencia_${currentDate}.xlsx"`
       );
 
       // Envía el archivo como un adjunto en la respuesta
@@ -247,7 +252,7 @@ export class AttendanceController {
         message: "Failed to fetch all departaments",
       });
     }
-  }
+  };
 
   // Obtener empleados con vacaciones
   getAllVacations: RequestHandler = async (req, res) => {
@@ -266,5 +271,5 @@ export class AttendanceController {
         message: "Failed to fetch all vacations",
       });
     }
-  }
+  };
 }

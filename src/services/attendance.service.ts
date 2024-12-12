@@ -154,8 +154,8 @@ export class AttendanceService {
         havingClause = `HAVING ${havingClauses.join(" AND ")}`;
       }
 
-      // Consulta para obtener los datos paginados
-      const dataQuery = `
+      //solo empl activos 1
+          const dataQuery = `
           SELECT 
             e.id, 
             e.emp_code AS "Numero",
@@ -190,7 +190,6 @@ export class AttendanceService {
           ORDER BY date(p.punch_time)
           LIMIT :pageSize OFFSET :offset
         `;
-      console.log(dataQuery);
 
       // Consulta para obtener el total de registros considerando los grupos y el HAVING
       const countQuery = `
@@ -262,13 +261,17 @@ export class AttendanceService {
                   WHEN '6' THEN 'Sábado'
               END AS "DiaSemana",
               CASE
-                  WHEN COUNT(p.punch_time) = 1 THEN 'B'
-                  ELSE NULL
-              END AS "TipoB",
-              CASE
                   WHEN COUNT(p.punch_time) = 0 THEN 'Z'
                   ELSE NULL
               END AS "TipoZ",
+                  CASE
+                  WHEN COUNT(p.punch_time) = 1 AND strftime('%H:%M', MIN(p.punch_time)) < '12:00' THEN 'HI'
+                  ELSE NULL
+              END AS "HI",
+              CASE
+                  WHEN COUNT(p.punch_time) = 1 AND strftime('%H:%M', MIN(p.punch_time)) >= '12:00' THEN 'HS'
+                  ELSE NULL
+              END AS "HS",
               CASE
                   WHEN ea.paycode_id = 12 THEN 'Si'
                   ELSE 'No'
@@ -290,11 +293,11 @@ export class AttendanceService {
                   ON ea.employee_id = e.id
                   AND DATE(ea.exception_date) = d.att_date
           WHERE
-              (:department IS NULL OR dp.dept_name = :department)
+              (:department IS NULL OR dp.dept_name = :department) AND e.emp_active = 1
           GROUP BY
               e.id, d.att_date, e.emp_firstname, e.emp_lastname, dp.dept_name, ea.paycode_id
           ORDER BY
-              d.att_date, e.emp_lastname, e.emp_firstname;
+              dp.dept_name ASC, e.emp_lastname ASC, e.emp_firstname ASC;
       `;
 
       // Ejecutar la consulta con reemplazos para startDate, endDate y department
@@ -411,7 +414,6 @@ export class AttendanceService {
     }
   }
 
-
   // Total de asistencias, ausencias y atrasos
   public async getAttendanceSummaryByYear(year: string, month: string | null) {
     try {
@@ -451,11 +453,13 @@ export class AttendanceService {
 
       return results;
     } catch (error) {
-      console.error("Error fetching attendance summary by year and department:", error);
+      console.error(
+        "Error fetching attendance summary by year and department:",
+        error
+      );
       throw error;
     }
   }
-
 
   // Obtener los datos de faltas por enfermedad y por vacaciones
   public async getAbsencesByTypeByYear(year: string, month: string | null) {
@@ -618,9 +622,7 @@ export class AttendanceService {
               att_exceptionassign AEA ON AP.id = AEA.paycode_id
                   INNER JOIN
               hr_employee HE ON AEA.employee_id = HE.id
-          WHERE
-            DATE(AEA.exception_date) = CURRENT_DATE
-            AND HE.emp_active = 1
+          WHERE HE.emp_active = 1
           ORDER BY
               HE.emp_pin;
       `;
@@ -630,11 +632,9 @@ export class AttendanceService {
       });
 
       return results;
-
     } catch (error) {
       console.error("Error fetching all vacations:", error);
       throw error;
     }
   }
-
 }

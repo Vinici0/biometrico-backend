@@ -15,7 +15,8 @@ export interface EmployeeAttendance {
   Departamento: string | null; // Nombre del departamento (puede ser null)
   TotalHorasRedondeadas: number | null; // Total de horas trabajadas redondeadas, o null
   DiaSemana: string; // Nombre del día de la semana
-  TipoB: string | null; // 'B' si hay un solo registro de hora, null de lo contrario
+  HI: string | null; // 'B' si hay un solo registro de hora, null de lo contrario
+  HS: string | null;
   TipoZ: string | null; // 'Z' si no hay registros de hora, null de lo contrario
   Vacaciones: string; // 'Si' si el paycode_id es 12, 'No' de lo contrario
   Enfermedad: string; // 'Si' si el paycode_id es 11, 'No' de lo contrario

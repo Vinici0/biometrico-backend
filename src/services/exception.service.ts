@@ -19,6 +19,19 @@ export interface ExceptionRecord {
   tipo_de_excepcion: string;
 }
 
+export interface Attendance {
+  id: number;
+  Numero: string;
+  Nombre: string;
+  Fecha: string;
+  Entrada: string;
+  Salida: null | string;
+  Departamento: string;
+  TotalHorasRedondeadas: number | null;
+  DiaSemana: string;
+  status: string;
+}
+
 export class ExceptionService {
   private printer: PdfPrinter;
 
@@ -349,5 +362,298 @@ export class ExceptionService {
       console.error("Error generando el reporte de Excel:", error);
       throw error;
     }
+  }
+
+  public async generateAttendanceReportPDF(
+    data: Attendance[]
+  ): Promise<Buffer> {
+    const formattedData = data.map((item) => [
+      { text: item.id.toString(), alignment: "center" },
+      { text: item.Numero, alignment: "center" },
+      { text: item.Nombre, alignment: "left" },
+      {
+        text: new Date(item.Fecha).toLocaleDateString("es-ES"),
+        alignment: "center",
+      },
+      { text: item.Entrada, alignment: "center" },
+      { text: item.Salida || "", alignment: "center" },
+      { text: item.Departamento, alignment: "center" },
+      {
+        text: item.TotalHorasRedondeadas?.toString() || "",
+        alignment: "center",
+      },
+      { text: item.DiaSemana, alignment: "center" },
+      { text: item.status, alignment: "center" },
+    ]);
+
+    const documentDefinition: TDocumentDefinitions = {
+      pageSize: "A4",
+      pageMargins: [40, 60, 40, 60],
+      header: (currentPage: number, pageCount: number) => {
+        if (currentPage === 1) {
+          return {
+            columns: [
+              {
+                image: path.join(__dirname, "..", "assets", "logo.png"),
+                width: 70,
+                margin: [40, 20, 0, 20],
+              },
+              {
+                text: "Reporte de Asistencia",
+                alignment: "center",
+                fontSize: 18,
+                bold: true,
+                margin: [0, 25, 50, 0],
+              },
+            ],
+          };
+        } else {
+          return null;
+        }
+      },
+      footer: {
+        columns: [
+          {
+            text: `Fecha de Reporte: ${new Date().toLocaleDateString("es-ES")}`,
+            alignment: "left",
+            margin: [40, 0, 0, 0],
+          },
+        ],
+        margin: [0, 0, 0, 30],
+      },
+      content: [
+        {
+          table: {
+            headerRows: 1,
+            widths: [
+              "5%",
+              "10%",
+              "20%",
+              "10%",
+              "10%",
+              "10%",
+              "15%",
+              "10%",
+              "5%",
+              "5%",
+            ],
+            body: [
+              [
+                { text: "ID", style: "tableHeader" },
+                { text: "Número", style: "tableHeader" },
+                { text: "Nombre", style: "tableHeader" },
+                { text: "Fecha", style: "tableHeader" },
+                { text: "Entrada", style: "tableHeader" },
+                { text: "Salida", style: "tableHeader" },
+                { text: "Departamento", style: "tableHeader" },
+                { text: "Horas", style: "tableHeader" },
+                { text: "Día", style: "tableHeader" },
+                { text: "Estado", style: "tableHeader" },
+              ],
+              ...formattedData,
+            ],
+          },
+          layout: {
+            fillColor: (rowIndex: number) =>
+              rowIndex === 0
+                ? "#CCCCCC"
+                : rowIndex % 2 === 0
+                ? "#F5F5F5"
+                : null,
+            paddingLeft: () => 6,
+            paddingRight: () => 6,
+            paddingTop: () => 4,
+            paddingBottom: () => 4,
+          },
+          margin: [0, 20, 0, 0],
+        },
+      ],
+      styles: {
+        tableHeader: {
+          bold: true,
+          fontSize: 10,
+          color: "black",
+        },
+        subheader: {
+          fontSize: 12,
+          bold: true,
+        },
+      },
+      defaultStyle: {
+        font: "Roboto",
+        fontSize: 8,
+      },
+    };
+
+    return new Promise((resolve, reject) => {
+      try {
+        const pdfDoc = this.printer.createPdfKitDocument(documentDefinition);
+        const chunks: any[] = [];
+
+        pdfDoc.on("data", (chunk) => {
+          chunks.push(chunk);
+        });
+
+        pdfDoc.on("end", () => {
+          const result = Buffer.concat(chunks);
+          resolve(result);
+        });
+
+        pdfDoc.end();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+
+  public generateAttendanceReportPDFBuffer(
+    data: Attendance[]
+  ): Promise<Buffer> {
+    const formattedData = data.map((item) => [
+      { text: item.Nombre, alignment: "left" },
+      {
+        text: new Date(item.Fecha).toLocaleDateString("es-ES"),
+        alignment: "center",
+      },
+      { text: item.Entrada, alignment: "center" },
+      { text: item.Salida || "", alignment: "center" },
+      { text: item.Departamento, alignment: "center" },
+      {
+        text: item.TotalHorasRedondeadas?.toString() || "",
+        alignment: "center",
+      },
+      { text: item.DiaSemana, alignment: "center" },
+      { text: item.status, alignment: "center" },
+    ]);
+
+    const documentDefinition: TDocumentDefinitions = {
+      pageSize: "A4",
+      pageMargins: [40, 60, 40, 60],
+      header: (currentPage: number, pageCount: number) => {
+        if (currentPage === 1) {
+          return {
+            columns: [
+              {
+                image: path.join(__dirname, "..", "assets", "logo.png"),
+                width: 70,
+                margin: [40, 20, 0, 20],
+              },
+              {
+                text: "Reporte de Asistencia",
+                alignment: "center",
+                fontSize: 18,
+                bold: true,
+                margin: [0, 25, 50, 0],
+              },
+            ],
+          };
+        } else {
+          return null;
+        }
+      },
+      footer: {
+        columns: [
+          {
+            text: `Fecha de Reporte: ${new Date().toLocaleDateString("es-ES")}`,
+            alignment: "left",
+            margin: [40, 0, 0, 0],
+          },
+        ],
+        margin: [0, 0, 0, 30],
+      },
+      content: [
+        {
+          table: {
+            headerRows: 1,
+            widths: ["25%", "10%", "10%", "15%", "10%", "10%", "10%", "10%"],
+            body: [
+              [
+                { text: "Nombre", style: "tableHeader" },
+                { text: "Fecha", style: "tableHeader" },
+                { text: "Entrada", style: "tableHeader" },
+                { text: "Salida", style: "tableHeader" },
+                { text: "Departamento", style: "tableHeader" },
+                { text: "Horas", style: "tableHeader" },
+                { text: "Día", style: "tableHeader" },
+                { text: "Estado", style: "tableHeader" },
+              ],
+              ...formattedData,
+            ],
+          },
+          layout: {
+            fillColor: (rowIndex: number) =>
+              rowIndex === 0
+                ? "#CCCCCC"
+                : rowIndex % 2 === 0
+                ? "#F5F5F5"
+                : null,
+            paddingLeft: () => 6,
+            paddingRight: () => 6,
+            paddingTop: () => 4,
+            paddingBottom: () => 4,
+          },
+          margin: [0, 20, 0, 0],
+        },
+      ],
+      styles: {
+        tableHeader: {
+          bold: true,
+          fontSize: 10,
+          color: "black",
+        },
+        subheader: {
+          fontSize: 12,
+          bold: true,
+        },
+      },
+      defaultStyle: {
+        font: "Roboto",
+        fontSize: 8,
+      },
+    };
+
+    return this.createPdfBuffer(documentDefinition);
+  }
+
+  public async generateAttendanceReportExcel(
+    data: Attendance[]
+  ): Promise<ExcelJS.Workbook> {
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("Reporte de Asistencia");
+
+    // Definir las columnas del Excel
+    worksheet.columns = [
+      { header: "ID", key: "id", width: 10 },
+      { header: "Número", key: "Numero", width: 15 },
+      { header: "Nombre", key: "Nombre", width: 30 },
+      { header: "Fecha", key: "Fecha", width: 15 },
+      { header: "Entrada", key: "Entrada", width: 15 },
+      { header: "Salida", key: "Salida", width: 15 },
+      { header: "Departamento", key: "Departamento", width: 20 },
+      { header: "Horas", key: "TotalHorasRedondeadas", width: 10 },
+      { header: "Día", key: "DiaSemana", width: 10 },
+      { header: "Estado", key: "status", width: 15 },
+    ];
+
+    // Agregar data
+    data.forEach((record) => {
+      worksheet.addRow({
+        id: record.id,
+        Numero: record.Numero,
+        Nombre: record.Nombre,
+        Fecha: new Date(record.Fecha).toLocaleDateString("es-ES"),
+        Entrada: record.Entrada,
+        Salida: record.Salida || "",
+        Departamento: record.Departamento,
+        TotalHorasRedondeadas: record.TotalHorasRedondeadas ?? "",
+        DiaSemana: record.DiaSemana,
+        status: record.status,
+      });
+    });
+
+    // Encabezados en negrita
+    worksheet.getRow(1).font = { bold: true };
+
+    return workbook;
   }
 }

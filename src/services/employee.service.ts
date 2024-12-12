@@ -48,7 +48,7 @@ export class EmployeeService {
             e.emp_firstname || ' ' || e.emp_lastname LIKE :searchTerm 
             OR d.dept_name LIKE :searchTerm 
             OR e.emp_role LIKE :searchTerm 
-            OR e.emp_email LIKE :searchTerm
+            OR e.emp_email LIKE :searchTerm AND e.emp_active = 1
         `;
         replacements.searchTerm = `%${searchTerm}%`;
       }
@@ -83,7 +83,7 @@ export class EmployeeService {
         WHERE 
           emp_firstname || ' ' || emp_lastname LIKE :searchTerm 
           OR emp_role LIKE :searchTerm 
-          OR emp_email LIKE :searchTerm
+          OR emp_email LIKE :searchTerm AND emp_active = 1
       `;
 
       const replacements = { searchTerm: `%${searchTerm}%` };
