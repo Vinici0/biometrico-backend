@@ -125,7 +125,8 @@ export class ExceptionController {
     try {
       const pdfBuffer =
         await this.exceptionService.generateAttendanceReportPDFBuffer(
-          dataResult
+          startDate as string,
+          endDate as string
         );
 
       // Configurar las cabeceras de la respuesta para el PDF
@@ -149,11 +150,13 @@ export class ExceptionController {
     res: Response
   ) => {
     const { startDate, endDate } = req.query;
-    console.log(`Generando reporte desde ${startDate} hasta ${endDate}`);
 
     try {
       const workbook =
-        await this.exceptionService.generateAttendanceReportExcel(dataResult);
+        await this.exceptionService.generateAttendanceReportExcel(
+          startDate as string,
+          endDate as string
+        );
 
       // Convertir el workbook a un buffer
       const buffer = await workbook.xlsx.writeBuffer();

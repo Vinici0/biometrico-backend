@@ -190,7 +190,8 @@ export class AttendanceService {
           ORDER BY date(p.punch_time)
           LIMIT :pageSize OFFSET :offset
         `;
-
+        console.log(dataQuery);
+        
       // Consulta para obtener el total de registros considerando los grupos y el HAVING
       const countQuery = `
           SELECT COUNT(*) as total
