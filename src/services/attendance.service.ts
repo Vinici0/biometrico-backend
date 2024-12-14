@@ -155,7 +155,7 @@ export class AttendanceService {
       }
 
       //solo empl activos 1
-          const dataQuery = `
+      const dataQuery = `
           SELECT 
             e.id, 
             e.emp_code AS "Numero",
@@ -201,7 +201,6 @@ export class AttendanceService {
             ${havingClause}
           ) as subquery
         `;
-      console.log(countQuery);
 
       // Ejecutar ambas consultas en paralelo
       const [results, countResults] = await Promise.all([

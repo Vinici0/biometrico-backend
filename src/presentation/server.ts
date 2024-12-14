@@ -1,6 +1,8 @@
 import express, { Router } from "express";
 import cors from "cors";
 import path from "path";
+import morgan from 'morgan';
+
 import sequelize from "../config/database";
 
 interface Options {
@@ -41,6 +43,10 @@ export class Server {
       );
       res.sendFile(indexPath);
     });
+
+    //* Logger
+    // this.app.use(morgan('dev'));
+    this.app.use(morgan('combined'));
 
     //* Database
     this.connectDatabase();
