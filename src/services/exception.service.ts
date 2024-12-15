@@ -7,30 +7,8 @@ import sequelize from "../config/database";
 import { TDocumentDefinitions } from "pdfmake/interfaces";
 import { resultsInit } from "../data/init";
 import ExcelJS from "exceljs";
-
-export interface ExceptionRecord {
-  emp_pin: number;
-  emp_firstname: string;
-  emp_lastname: string;
-  exception_date: string;
-  starttime: string;
-  endtime: string;
-  total_horas_excepcion: number;
-  tipo_de_excepcion: string;
-}
-
-export interface Attendance {
-  id: number;
-  Numero: string;
-  Nombre: string;
-  Fecha: string;
-  Entrada: string;
-  Salida: null | string;
-  Departamento: string;
-  TotalHorasRedondeadas: number | null;
-  DiaSemana: string;
-  status: string;
-}
+import { format, parseISO } from 'date-fns';
+import { ExceptionRecord, Attendance } from "../domain/interface/exception.interface";
 
 export class ExceptionService {
   private printer: PdfPrinter;
@@ -617,63 +595,80 @@ export class ExceptionService {
   
   public async generateAttendanceReportPDFBuffer(
     startDate: string = "2024-09-01",
-    endDate: string = "2024-09-30"
+    endDate: string = "2024-09-30",
+    status: string = "Todos"
   ): Promise<Buffer> {
-
-    // Consulta SQL para obtener los datos de asistencia
+  
+    const replacements: Record<string, any> = {
+      startDate,
+      endDate,
+    };
+  
+    // Construir cláusula HAVING basada en el estado
+    let havingClause = "";
+    if (status !== "Todos" && status !== "") {
+      havingClause = `HAVING "status" = :status`;
+      replacements.status = status;
+    }
+  
     const dataQuery = `
-      SELECT 
-        e.id, 
-        e.emp_code AS "Numero",
-        e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
-        date(p.punch_time) AS "Fecha",
-        MIN(time(p.punch_time)) AS "Entrada",
-        CASE 
-          WHEN COUNT(p.punch_time) > 1 THEN MAX(time(p.punch_time)) 
-          ELSE NULL 
-        END AS "Salida",
-        dp.dept_name AS "Departamento",
-        CASE 
-          WHEN COUNT(p.punch_time) > 1 THEN ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) * 24) 
-          ELSE NULL 
-        END AS "TotalHorasRedondeadas",
-        CASE strftime('%w', date(p.punch_time))
-            WHEN '0' THEN 'Domingo'
-            WHEN '1' THEN 'Lunes'
-            WHEN '2' THEN 'Martes'
-            WHEN '3' THEN 'Miércoles'
-            WHEN '4' THEN 'Jueves'
-            WHEN '5' THEN 'Viernes'
-            WHEN '6' THEN 'Sábado'
-        END AS "DiaSemana",
-        CASE 
-          WHEN COUNT(p.punch_time) > 1 THEN 'Completo'
-          ELSE 'Pendiente'
-        END AS "status"
-      FROM 
-        att_punches p
-      JOIN 
-        hr_employee e ON p.emp_id = e.id
-      LEFT JOIN 
-        hr_department dp ON e.emp_dept = dp.id
-      WHERE 
-        date(p.punch_time) BETWEEN :startDate AND :endDate
-      GROUP BY 
-        date(p.punch_time), e.emp_code, e.emp_firstname, e.emp_lastname, dp.dept_name
-      ORDER BY 
-        date(p.punch_time)
+      WITH RECURSIVE dates(d) AS (
+          SELECT date(:startDate)
+          UNION ALL
+          SELECT date(d, '+1 day')
+          FROM dates
+          WHERE d < date(:endDate)
+      )
+      SELECT
+          e.id,
+          e.emp_code AS "Numero",
+          e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
+          dates.d AS "Fecha",
+          MIN(time(p.punch_time)) AS "Entrada",
+          CASE
+              WHEN COUNT(p.punch_time) > 1 THEN MAX(time(p.punch_time))
+              ELSE NULL
+          END AS "Salida",
+          dp.dept_name AS "Departamento",
+          CASE
+              WHEN COUNT(p.punch_time) > 1 THEN
+                  ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) * 24, 2)
+              ELSE NULL
+          END AS "TotalHorasRedondeadas",
+          CASE strftime('%w', dates.d)
+              WHEN '0' THEN 'Domingo'
+              WHEN '1' THEN 'Lunes'
+              WHEN '2' THEN 'Martes'
+              WHEN '3' THEN 'Miércoles'
+              WHEN '4' THEN 'Jueves'
+              WHEN '5' THEN 'Viernes'
+              WHEN '6' THEN 'Sábado'
+          END AS "DiaSemana",
+          CASE
+              WHEN COUNT(p.punch_time) > 1 THEN 'Completo'
+              WHEN COUNT(p.punch_time) = 1 THEN 'Pendiente'
+              ELSE 'Sin Marcar'
+          END AS "status"
+      FROM hr_employee e
+      CROSS JOIN dates
+      LEFT JOIN att_punches p ON p.emp_id = e.id AND date(p.punch_time) = dates.d
+      LEFT JOIN hr_department dp ON e.emp_dept = dp.id
+      WHERE e.emp_active = 1
+      GROUP BY dates.d, e.id, e.emp_code, e.emp_firstname, e.emp_lastname, dp.dept_name
+      ${havingClause}
+      ORDER BY dates.d ASC, e.emp_lastname, e.emp_firstname;
     `;
-
+  
     // Ejecutar la consulta SQL
     const data = (await sequelize.query(dataQuery, {
-      replacements: { startDate, endDate },
+      replacements,
       type: Sequelize.QueryTypes.SELECT,
     })) as Attendance[];
-
+  
     const formattedData = data.map((item) => [
       { text: item.Nombre, alignment: "left" },
       {
-        text: new Date(item.Fecha).toLocaleDateString("es-ES"),
+        text: format(parseISO(item.Fecha), 'dd-MM-yyyy'),
         alignment: "center",
       },
       { text: item.Entrada, alignment: "center" },
@@ -686,7 +681,7 @@ export class ExceptionService {
       { text: item.DiaSemana, alignment: "center" },
       { text: item.status, alignment: "center" },
     ]);
-
+  
     const documentDefinition: TDocumentDefinitions = {
       pageSize: "A4",
       pageMargins: [40, 60, 40, 60],
@@ -726,7 +721,7 @@ export class ExceptionService {
         {
           table: {
             headerRows: 1,
-            widths: ["25%", "10%", "10%", "15%", "10%", "10%", "10%", "10%"],
+            widths: ["25%", "15%", "10%", "10%", "10%", "10%", "10%", "10%"],
             body: [
               [
                 { text: "Nombre", style: "tableHeader" },
@@ -772,7 +767,7 @@ export class ExceptionService {
         fontSize: 8,
       },
     };
-
+  
     return this.createPdfBuffer(documentDefinition);
   }
 
@@ -817,11 +812,11 @@ export class ExceptionService {
       LEFT JOIN 
         hr_department dp ON e.emp_dept = dp.id
       WHERE 
-        date(p.punch_time) BETWEEN :startDate AND :endDate
+        date(p.punch_time) BETWEEN :startDate AND :endDate AND e.emp_active = 1
       GROUP BY 
         date(p.punch_time), e.emp_code, e.emp_firstname, e.emp_lastname, dp.dept_name
       ORDER BY 
-        date(p.punch_time)
+      date(p.punch_time) ASC ,e.emp_lastname ASC, e.emp_firstname ASC;
     `;
 
     // Ejecutar la consulta SQL

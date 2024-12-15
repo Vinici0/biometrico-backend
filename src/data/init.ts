@@ -1,4 +1,4 @@
-import { ExceptionRecord } from "../services/exception.service";
+import { ExceptionRecord } from "../domain/interface/exception.interface";
 
 export const resultsInit: ExceptionRecord[] = [
     {
