@@ -150,13 +150,14 @@ export class ExceptionController {
     req: Request,
     res: Response
   ) => {
-    const { startDate, endDate } = req.query;
+    const { startDate, endDate, status } = req.query;
 
     try {
       const workbook =
         await this.exceptionService.generateAttendanceReportExcel(
           startDate as string,
-          endDate as string
+          endDate as string,
+          status as string
         );
 
       // Convertir el workbook a un buffer

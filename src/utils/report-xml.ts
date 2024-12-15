@@ -243,7 +243,7 @@ const processEmployeeData = (
           } else if (record.HI === "HI") {
             // Solo entrada
             horasPorDia[dayIndex] = settings.entranceOnlySymbol;
-          } else if (record.HI === "HS") {
+          } else if (record.HS === "HS") {
             // Solo salida
             horasPorDia[dayIndex] = settings.exitOnlySymbol;
           } else if (record.TipoZ === "Z") {
@@ -252,9 +252,9 @@ const processEmployeeData = (
           } else {
             // Total de horas
             horasPorDia[dayIndex] =
-              record.TotalHorasRedondeadas !== null
-                ? record.TotalHorasRedondeadas.toString()
-                : "";
+            record.TotalHorasRedondeadas !== null && record.TotalHorasRedondeadas !== 0
+              ? record.TotalHorasRedondeadas.toString()
+              : settings.entranceOnlySymbol;
           }
         }
       }
@@ -293,7 +293,7 @@ const processEmployeeData = (
           cell.fill = {
             type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "FFD966" }, // Ajusta el color
+            fgColor: { argb: "FFFFFF" }, // Ajusta el color
           };
         } else if (cell.value === "Z") {
           cell.fill = {

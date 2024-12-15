@@ -593,7 +593,7 @@ export class ExceptionService {
   // }
 
   
-  public async generateAttendanceReportPDFBuffer(
+  public async generateAttendanceReportPDFBuffer( 
     startDate: string = "2024-09-01",
     endDate: string = "2024-09-30",
     status: string = "Todos"
@@ -604,7 +604,6 @@ export class ExceptionService {
       endDate,
     };
   
-    // Construir cláusula HAVING basada en el estado
     let havingClause = "";
     if (status !== "Todos" && status !== "") {
       havingClause = `HAVING "status" = :status`;
@@ -656,10 +655,9 @@ export class ExceptionService {
       WHERE e.emp_active = 1
       GROUP BY dates.d, e.id, e.emp_code, e.emp_firstname, e.emp_lastname, dp.dept_name
       ${havingClause}
-      ORDER BY dates.d ASC, e.emp_lastname, e.emp_firstname;
+      ORDER BY dp.dept_name, e.emp_lastname, e.emp_firstname, dates.d ASC;
     `;
   
-    // Ejecutar la consulta SQL
     const data = (await sequelize.query(dataQuery, {
       replacements,
       type: Sequelize.QueryTypes.SELECT,
@@ -770,66 +768,79 @@ export class ExceptionService {
   
     return this.createPdfBuffer(documentDefinition);
   }
-
+  
   public async generateAttendanceReportExcel(
     startDate: string = "2024-09-01",
-    endDate: string = "2024-09-30"
+    endDate: string = "2024-09-30",
+    status: string = "Todos"
   ): Promise<ExcelJS.Workbook> {
-    // Consulta SQL para obtener los datos de asistencia
+    const replacements: Record<string, any> = {
+      startDate,
+      endDate,
+    };
+  
+    let havingClause = "";
+    if (status !== "Todos" && status !== "") {
+      havingClause = `HAVING "status" = :status`;
+      replacements.status = status;
+    }
+  
     const dataQuery = `
-      SELECT 
-        e.id, 
+      WITH RECURSIVE dates(d) AS (
+        SELECT date(:startDate)
+        UNION ALL
+        SELECT date(d, '+1 day')
+        FROM dates
+        WHERE d < date(:endDate)
+      )
+      SELECT
+        e.id,
         e.emp_code AS "Numero",
         e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
-        date(p.punch_time) AS "Fecha",
+        dates.d AS "Fecha",
         MIN(time(p.punch_time)) AS "Entrada",
-        CASE 
-          WHEN COUNT(p.punch_time) > 1 THEN MAX(time(p.punch_time)) 
-          ELSE NULL 
+        CASE
+          WHEN COUNT(p.punch_time) > 1 THEN MAX(time(p.punch_time))
+          ELSE NULL
         END AS "Salida",
         dp.dept_name AS "Departamento",
-        CASE 
-          WHEN COUNT(p.punch_time) > 1 THEN ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) * 24) 
-          ELSE NULL 
+        CASE
+          WHEN COUNT(p.punch_time) > 1 THEN
+            ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) * 24, 2)
+          ELSE NULL
         END AS "TotalHorasRedondeadas",
-        CASE strftime('%w', date(p.punch_time))
-            WHEN '0' THEN 'Domingo'
-            WHEN '1' THEN 'Lunes'
-            WHEN '2' THEN 'Martes'
-            WHEN '3' THEN 'Miércoles'
-            WHEN '4' THEN 'Jueves'
-            WHEN '5' THEN 'Viernes'
-            WHEN '6' THEN 'Sábado'
+        CASE strftime('%w', dates.d)
+          WHEN '0' THEN 'Domingo'
+          WHEN '1' THEN 'Lunes'
+          WHEN '2' THEN 'Martes'
+          WHEN '3' THEN 'Miércoles'
+          WHEN '4' THEN 'Jueves'
+          WHEN '5' THEN 'Viernes'
+          WHEN '6' THEN 'Sábado'
         END AS "DiaSemana",
-        CASE 
+        CASE
           WHEN COUNT(p.punch_time) > 1 THEN 'Completo'
-          ELSE 'Pendiente'
+          WHEN COUNT(p.punch_time) = 1 THEN 'Pendiente'
+          ELSE 'Sin Marcar'
         END AS "status"
-      FROM 
-        att_punches p
-      JOIN 
-        hr_employee e ON p.emp_id = e.id
-      LEFT JOIN 
-        hr_department dp ON e.emp_dept = dp.id
-      WHERE 
-        date(p.punch_time) BETWEEN :startDate AND :endDate AND e.emp_active = 1
-      GROUP BY 
-        date(p.punch_time), e.emp_code, e.emp_firstname, e.emp_lastname, dp.dept_name
-      ORDER BY 
-      date(p.punch_time) ASC ,e.emp_lastname ASC, e.emp_firstname ASC;
+      FROM hr_employee e
+      CROSS JOIN dates
+      LEFT JOIN att_punches p ON p.emp_id = e.id AND date(p.punch_time) = dates.d
+      LEFT JOIN hr_department dp ON e.emp_dept = dp.id
+      WHERE e.emp_active = 1
+      GROUP BY dates.d, e.id, e.emp_code, e.emp_firstname, e.emp_lastname, dp.dept_name
+      ${havingClause}
+      ORDER BY dp.dept_name, e.emp_lastname, e.emp_firstname, dates.d ASC;
     `;
-
-    // Ejecutar la consulta SQL
+  
     const data = (await sequelize.query(dataQuery, {
-      replacements: { startDate, endDate },
+      replacements,
       type: Sequelize.QueryTypes.SELECT,
     })) as Attendance[];
-
-    // Crear el workbook y el worksheet
+  
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet("Reporte de Asistencia");
-
-    // Definir las columnas del Excel
+  
     worksheet.columns = [
       { header: "Nombre", key: "Nombre", width: 30 },
       { header: "Fecha", key: "Fecha", width: 15 },
@@ -840,8 +851,7 @@ export class ExceptionService {
       { header: "Día", key: "DiaSemana", width: 10 },
       { header: "Estado", key: "status", width: 15 },
     ];
-
-    // Agregar los datos al worksheet
+  
     data.forEach((record) => {
       worksheet.addRow({
         Nombre: record.Nombre,
@@ -854,10 +864,10 @@ export class ExceptionService {
         status: record.status,
       });
     });
-
-    // Encabezados en negrita
+  
     worksheet.getRow(1).font = { bold: true };
-
+  
     return workbook;
   }
+  
 }
