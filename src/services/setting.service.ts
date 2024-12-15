@@ -1,7 +1,12 @@
 import fs from "fs";
 import path from "path";
+import { Settings } from "../domain/interface/setting.interface";
 
-const settingsFilePath = path.join(__dirname, "..", "../data/settings.json");
+const settingsFilePath = path.join(
+  __dirname,
+  "..",
+  "../src/data/settings.json"
+);
 
 export class SettingService {
   constructor() {}
@@ -27,7 +32,7 @@ export class SettingService {
     });
   }
 
-  public async updateSettings(newSettings: any): Promise<void> {
+  public async updateSettings(newSettings: Settings): Promise<void> {    
     return new Promise((resolve, reject) => {
       fs.writeFile(
         settingsFilePath,

@@ -11,8 +11,8 @@ export class SettingRoutes {
     const settingService = new SettingService();
     const settingController = new SettingController(settingService);
 
-    router.get("/settings", settingController.getSettings);
-    router.put("/settings", settingController.updateSettings);
+    router.get("/", settingController.getSettings);
+    router.put("/", settingController.updateSettings);
 
     return router;
   }

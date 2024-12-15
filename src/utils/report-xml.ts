@@ -3,6 +3,15 @@ import { format, eachDayOfInterval, isBefore, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { AsistenciaData } from "../domain/interface/employee-attendance.interface";
 import { getMonthName } from "./getMonthName";
+import fs from 'fs';
+import path from 'path';
+
+// Obtener la ruta al archivo settings.json
+const settingsFilePath = path.join(__dirname, "..", "../src/data/settings.json");
+// Leer y parsear el archivo settings.json
+const settingsData = fs.readFileSync(settingsFilePath, 'utf8');
+const settings = JSON.parse(settingsData);
+
 
 
 function getExcelColumnLetter(columnNumber: number): string {
@@ -189,7 +198,7 @@ const processEmployeeData = (
   daysArray: string[]
 ) => {
   const extraColumnsCount = 12; // Actualiza este valor según el número de columnas extra
-
+  
   Object.values(data).forEach((employeeRecords, index) => {
     if (employeeRecords.length === 0) return;
 
@@ -210,21 +219,21 @@ const processEmployeeData = (
           //si es igual a 11 E es enfermedad
           if (Number(record.PaycodeID) === 11) {
             // Si paycode_id es 11, coloca 'E' en la celda
-            horasPorDia[dayIndex] = "E";
+            horasPorDia[dayIndex] =settings.sickLeaveSymbol;
           } else if (Number(record.PaycodeID) === 12) {
             // Si paycode_id es 12, coloca 'V' en la celda
             horasPorDia[dayIndex] = "V";
           } else if (record.HI === "HI") {
             // Si 'B' está presente en el registro, coloca 'B' en la celda
-            horasPorDia[dayIndex] = "HI";
+            horasPorDia[dayIndex] = settings.entranceOnlySymbol;
           } 
           else if (record.HI === "HS") {
             // Si 'B' está presente en el registro, coloca 'B' en la celda
-            horasPorDia[dayIndex] = "HS";
+            horasPorDia[dayIndex] = settings.exitOnlySymbol;
           } 
           else if (record.TipoZ === "Z") {
             // Si 'Z' está presente en el registro, coloca 'Z' en la celda
-            horasPorDia[dayIndex] = "F";
+            horasPorDia[dayIndex] = settings.absenceSymbol;
           }
           else {
             // De lo contrario, coloca 'TotalHorasRedondeadas' si está disponible

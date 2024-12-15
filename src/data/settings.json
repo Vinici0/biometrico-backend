@@ -1,5 +1,7 @@
 {
-    "absenceSymbol": "F",
-    "entranceOnlySymbol": "HI",
-    "exitOnlySymbol": "HS"
+  "absenceSymbol": "F",
+  "entranceOnlySymbol": "HR",
+  "exitOnlySymbol": "HS",
+  "vacationSymbol": "V",
+  "sickLeaveSymbol": "E"
 }

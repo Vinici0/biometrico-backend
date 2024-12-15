@@ -243,11 +243,11 @@ export class AttendanceService {
           )
           SELECT
               e.id AS "EmpleadoID",
-              e.emp_code AS "Numero",
+              e.emp_pin AS "Numero",
               e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
               ea.paycode_id AS "PaycodeID",
               d.att_date AS "Fecha",
-              e.emp_code AS "Numero",   
+              e.emp_pin AS "Numero",   
               MIN(strftime('%H:%M', p.punch_time)) AS "Entrada",
               MAX(strftime('%H:%M', p.punch_time)) AS "Salida",
               dp.dept_name AS "Departamento",
@@ -265,7 +265,7 @@ export class AttendanceService {
                   WHEN COUNT(p.punch_time) = 0 THEN 'Z'
                   ELSE NULL
               END AS "TipoZ",
-                  CASE
+              CASE
                   WHEN COUNT(p.punch_time) = 1 AND strftime('%H:%M', MIN(p.punch_time)) < '12:00' THEN 'HI'
                   ELSE NULL
               END AS "HI",
@@ -296,37 +296,56 @@ export class AttendanceService {
           WHERE
               (:department IS NULL OR dp.dept_name = :department) AND e.emp_active = 1
           GROUP BY
-              e.id, d.att_date, e.emp_firstname, e.emp_lastname, dp.dept_name, ea.paycode_id
+              e.id, d.att_date, e.emp_firstname, e.emp_lastname, dp.dept_name, ea.paycode_id, e.emp_pin
           ORDER BY
-              dp.dept_name;
+              dp.dept_name ASC, e.emp_lastname ASC, e.emp_firstname ASC;
       `;
-
+  
       // Ejecutar la consulta con reemplazos para startDate, endDate y department
       const results = (await sequelize.query(query, {
         replacements: { startDate, endDate, department },
         type: Sequelize.QueryTypes.SELECT,
       })) as EmployeeAttendance[];
-
+  
       const employeeResults: AsistenciaData = {};
-
+  
+      // Agrupar resultados por EmpleadoID
       results.forEach((result) => {
         if (!employeeResults[result.EmpleadoID]) {
           employeeResults[result.EmpleadoID] = [];
         }
         employeeResults[result.EmpleadoID].push(result);
       });
-
-      const buffer = await createExcelReport(
-        startDate,
-        endDate,
-        employeeResults
-      );
+  
+      // Convertir el objeto a un array para poder ordenar por departamento, apellido y nombre nuevamente
+      const employeesArray = Object.entries(employeeResults);
+  
+      // Ordenar el array basándonos en el primer registro de cada empleado
+      employeesArray.sort(([, recordsA], [, recordsB]) => {
+        const empA = recordsA[0];
+        const empB = recordsB[0];
+        // Ordenar por Departamento, luego por Apellido (el último nombre) y finalmente por el nombre completo
+        return (
+          empA.Departamento?.localeCompare(empB.Departamento ?? '') ||
+          empA.Nombre.split(' ').pop()!.localeCompare(empB.Nombre.split(' ').pop()!) ||
+          empA.Nombre.localeCompare(empB.Nombre)
+        );
+      });
+  
+      // Reconstruir el objeto AsistenciaData ordenado
+      const sortedEmployeeResults: AsistenciaData = {};
+      for (const [EmpleadoID, records] of employeesArray) {
+        sortedEmployeeResults[Number(EmpleadoID)] = records;
+      }
+  
+      const buffer = await createExcelReport(startDate, endDate, sortedEmployeeResults);
       return buffer;
     } catch (error) {
       console.error("Error fetching attendance report:", error);
       throw error;
     }
   }
+  
 
   // ==========================================================
   // Métodos adicionales para el total conteo para dashboard

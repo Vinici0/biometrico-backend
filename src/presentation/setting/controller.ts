@@ -19,7 +19,7 @@ export class SettingController {
 
   updateSettings: RequestHandler = (req: Request, res: Response) => {
     const { settings } = req.body;
-
+    
     this.categoryService
       .updateSettings(settings)
       .then((data) => {
