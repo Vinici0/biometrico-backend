@@ -197,9 +197,27 @@ const processEmployeeData = (
   dateRange: Date[],
   daysArray: string[]
 ) => {
-  const extraColumnsCount = 12; // Actualiza este valor según el número de columnas extra
-  
-  Object.values(data).forEach((employeeRecords, index) => {
+  const extraColumnsCount = 12; // Ajusta este valor según tus necesidades
+
+  // 1. Convertir el objeto en un arreglo de [idEmpleado, Empleado[]]
+  const entries = Object.entries(data);
+
+  // 2. Ordenar las entradas por Departamento, Emp_lastname y Emp_firstname
+  entries.sort(([, aRecords], [, bRecords]) => {
+    const a = aRecords[0];
+    const b = bRecords[0];
+
+    const deptCompare = a.Departamento.localeCompare(b.Departamento);
+    if (deptCompare !== 0) return deptCompare;
+
+    const lastNameCompare = a.Emp_lastname.localeCompare(b.Emp_lastname);
+    if (lastNameCompare !== 0) return lastNameCompare;
+
+    return a.Emp_firstname.localeCompare(b.Emp_firstname);
+  });
+
+  // 3. Iterar sobre las entradas ya ordenadas
+  entries.forEach(([ , employeeRecords ], index) => {
     if (employeeRecords.length === 0) return;
 
     const empleado = employeeRecords[0];
@@ -216,27 +234,23 @@ const processEmployeeData = (
             format(date, "yyyy-MM-dd") === format(recordDate, "yyyy-MM-dd")
         );
         if (dayIndex >= 0) {
-          //si es igual a 11 E es enfermedad
           if (Number(record.PaycodeID) === 11) {
-            // Si paycode_id es 11, coloca 'E' en la celda
-            horasPorDia[dayIndex] =settings.sickLeaveSymbol;
+            // Enfermedad
+            horasPorDia[dayIndex] = settings.sickLeaveSymbol;
           } else if (Number(record.PaycodeID) === 12) {
-            // Si paycode_id es 12, coloca 'V' en la celda
+            // Vacaciones
             horasPorDia[dayIndex] = "V";
           } else if (record.HI === "HI") {
-            // Si 'B' está presente en el registro, coloca 'B' en la celda
+            // Solo entrada
             horasPorDia[dayIndex] = settings.entranceOnlySymbol;
-          } 
-          else if (record.HI === "HS") {
-            // Si 'B' está presente en el registro, coloca 'B' en la celda
+          } else if (record.HI === "HS") {
+            // Solo salida
             horasPorDia[dayIndex] = settings.exitOnlySymbol;
-          } 
-          else if (record.TipoZ === "Z") {
-            // Si 'Z' está presente en el registro, coloca 'Z' en la celda
+          } else if (record.TipoZ === "Z") {
+            // Ausencia
             horasPorDia[dayIndex] = settings.absenceSymbol;
-          }
-          else {
-            // De lo contrario, coloca 'TotalHorasRedondeadas' si está disponible
+          } else {
+            // Total de horas
             horasPorDia[dayIndex] =
               record.TotalHorasRedondeadas !== null
                 ? record.TotalHorasRedondeadas.toString()
@@ -253,7 +267,6 @@ const processEmployeeData = (
       empleado.Departamento || "",
       daysArray.length,
       ...horasPorDia,
-      // Placeholders para columnas extra
       ...Array(extraColumnsCount).fill(""),
     ];
     const row = sheet.addRow(rowValues);
@@ -268,47 +281,37 @@ const processEmployeeData = (
         bottom: { style: "thin" },
       };
 
-      // Aplicar estilos según el valor de la celda
-      if (
-        colNumber > 5 && // Ajusta este índice según tu estructura
-        colNumber <= 5 + daysArray.length
-      ) {
+      // Colorear celdas según el valor
+      if (colNumber > 5 && colNumber <= 5 + daysArray.length) {
         if (cell.value === "HI") {
           cell.fill = {
             type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "FFFFFF" }, // Color naranja
+            fgColor: { argb: "FFFFFF" }, // Ajusta el color
           };
-        } 
-        else if (cell.value === "HS") {
+        } else if (cell.value === "HS") {
           cell.fill = {
             type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "FFD966" }, // Color amarillo
+            fgColor: { argb: "FFD966" }, // Ajusta el color
           };
-        }
-        else if (cell.value === "√") {
-          // Pintar de azul si el valor es 'Z'
+        } else if (cell.value === "Z") {
           cell.fill = {
             type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "FFFFFF" }, // Color azul claro
+            fgColor: { argb: "FFFFFF" }, // Ajusta el color
           };
-        }
-        else if (cell.value === "E") {
-          // Pintar de rojo si el valor es 'E'
+        } else if (cell.value === "E") {
           cell.fill = {
             type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "FFC7CE" }, // Color rojo claro
+            fgColor: { argb: "FFC7CE" }, // Ajusta el color
           };
-        }
-        else if (cell.value === "V") {
-
+        } else if (cell.value === "V") {
           cell.fill = {
             type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "FFFF00" }, 
+            fgColor: { argb: "FFFF00" }, // Ajusta el color
           };
         }
       }
@@ -345,6 +348,7 @@ export const createExcelReport = async (
   createColumnHeaders(sheet, start, daysArray, weekdayArray);
 
   styleHeaders(sheet);
+  
   processEmployeeData(sheet, data, dateRange, daysArray);
 
   return workbook.xlsx.writeBuffer();

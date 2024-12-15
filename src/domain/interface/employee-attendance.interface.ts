@@ -7,12 +7,14 @@ export interface DataResponse {
 export interface EmployeeAttendance {
   EmpleadoID: number; // ID del empleado
   Nombre: string; // Nombre completo del empleado
+  Emp_lastname  : string; // Apellido del empleado
+  Emp_firstname : string; // Nombre del empleado
   Numero: string; // Número de empleado
   PaycodeID: number | null; // ID del código de pago (puede ser null)
   Fecha: string; // Fecha (formato ISO: YYYY-MM-DD)
   Entrada: string | null; // Hora de entrada (formato HH:mm) o null si no hay registros
   Salida: string | null; // Hora de salida (formato HH:mm) o null si no hay registros
-  Departamento: string | null; // Nombre del departamento (puede ser null)
+  Departamento: string ; // Nombre del departamento (puede ser null)
   TotalHorasRedondeadas: number | null; // Total de horas trabajadas redondeadas, o null
   DiaSemana: string; // Nombre del día de la semana
   HI: string | null; // 'B' si hay un solo registro de hora, null de lo contrario
