@@ -7,7 +7,7 @@
     "dev": "tsnd --respawn --clear src/app.ts",
     "build": "rimraf ./dist && tsc",
     "start": "npm run build && node dist/app.js",
-    "postbuild": "copyfiles -u 1 src/fonts/* dist/fonts && copyfiles -u 1 src/assets/* dist/assets"
+    "postbuild": "copyfiles -u 1 src/fonts/* dist/fonts && copyfiles -u 1 src/assets/* dist/assets && copyfiles -u 1 src/data/settings.json dist/data"
   },
   "keywords": [],
   "author": "",
