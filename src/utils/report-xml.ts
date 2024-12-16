@@ -7,7 +7,7 @@ import fs from 'fs';
 import path from 'path';
 
 // Obtener la ruta al archivo settings.json
-const settingsFilePath = path.join(__dirname, "..", "../src/data/settings.json");
+const settingsFilePath = path.join(__dirname, "..", "../dist/data/data/settings.json");
 // Leer y parsear el archivo settings.json
 const settingsData = fs.readFileSync(settingsFilePath, 'utf8');
 const settings = JSON.parse(settingsData);
