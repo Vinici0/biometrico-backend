@@ -353,7 +353,7 @@ export class AttendanceService {
                 hr_employee e
                 JOIN att_punches p ON e.id = p.emp_id
               WHERE
-                DATE(p.punch_time) = '2024-12-15'
+                DATE(p.punch_time) = CURRENT_DATE
               GROUP BY
                 e.emp_dept, e.id
             )
@@ -371,7 +371,7 @@ export class AttendanceService {
                 hr_employee e
                 JOIN att_punches p ON e.id = p.emp_id
               WHERE
-                DATE(p.punch_time) = '2024-12-15'
+                DATE(p.punch_time) = CURRENT_DATE
                 AND e.emp_dept = (
                   SELECT id FROM hr_department WHERE dept_name = 'Pers.Apoyo HeH'
                 )
@@ -392,7 +392,7 @@ export class AttendanceService {
                 hr_employee e
                 JOIN att_punches p ON e.id = p.emp_id
               WHERE
-                DATE(p.punch_time) = '2024-12-15'
+                DATE(p.punch_time) = CURRENT_DATE
                 AND e.emp_dept = (
                   SELECT id FROM hr_department WHERE dept_name = 'Personal.HeH'
                 )
@@ -411,7 +411,7 @@ export class AttendanceService {
             FROM att_paycode AP
             INNER JOIN att_exceptionassign AEA ON AP.id = AEA.paycode_id
             INNER JOIN hr_employee HE ON AEA.employee_id = HE.id
-            WHERE DATE(AEA.exception_date) = '2024-12-15'
+            WHERE DATE(AEA.exception_date) = CURRENT_DATE
             AND HE.emp_active = 1;
           `,
         },
