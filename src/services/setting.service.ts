@@ -5,7 +5,7 @@ import { Settings } from "../domain/interface/setting.interface";
 const settingsFilePath = path.join(
   __dirname,
   "..",
-  "../data/data/settings.json"
+  "../dist/data/data/settings.json"
 );
 
 export class SettingService {
