@@ -319,7 +319,7 @@ export class AttendanceService {
         }
         employeeResults[result.EmpleadoID].push(result);
       });
-      
+
       const buffer = await createExcelReport(
         startDate,
         endDate,
@@ -334,127 +334,131 @@ export class AttendanceService {
 
   // ==========================================================
   // Métodos adicionales para el total conteo para dashboard
-public async totalDashboardReport() {
-  try {
-    const queries = {
-      employee: {
-        total: `SELECT COUNT(*) AS total FROM hr_employee;`,
-        active: `SELECT COUNT(*) AS total FROM hr_employee WHERE emp_active = 1;`,
-        inactive: `SELECT COUNT(*) AS total FROM hr_employee WHERE emp_active = 0;`,
-      },
-      assistant: {
-        total: `
-          WITH today_attendance AS (
-            SELECT
-              e.emp_dept AS department_id,
-              e.id AS employee_id
-            FROM
-              hr_employee e
-              JOIN att_punches p ON e.id = p.emp_id
-            WHERE
-              DATE(p.punch_time) = CURRENT_DATE
-            GROUP BY
-              e.emp_dept, e.id
-          )
-          SELECT
-            COUNT(ta.employee_id) AS total_employees_today
-          FROM
-            today_attendance ta;
-        `,
-        support: `
-          WITH today_attendance AS (
-            SELECT
-              e.emp_dept AS department_id,
-              e.id AS employee_id
-            FROM
-              hr_employee e
-              JOIN att_punches p ON e.id = p.emp_id
-            WHERE
-              DATE(p.punch_time) = CURRENT_DATE
-              AND e.emp_dept = (
-                SELECT id FROM hr_department WHERE dept_name = 'Pers.Apoyo HeH'
-              )
-            GROUP BY
-              e.emp_dept, e.id
-          )
-          SELECT
-            COUNT(ta.employee_id) AS total_employees_today
-          FROM
-            today_attendance ta;
-        `,
-        normal: `
-          WITH today_attendance AS (
-            SELECT
-              e.emp_dept AS department_id,
-              e.id AS employee_id
-            FROM
-              hr_employee e
-              JOIN att_punches p ON e.id = p.emp_id
-            WHERE
-              DATE(p.punch_time) = CURRENT_DATE
-              AND e.emp_dept = (
-                SELECT id FROM hr_department WHERE dept_name = 'Personal.HeH'
-              )
-            GROUP BY
-              e.emp_dept, e.id
-          )
-          SELECT
-            COUNT(ta.employee_id) AS total_employees_today
-          FROM
-            today_attendance ta;
-        `,
-      },
-      vacation: {
-        total: `
-          SELECT COUNT(*) AS total
-          FROM att_paycode AP
-          INNER JOIN att_exceptionassign AEA ON AP.id = AEA.paycode_id
-          INNER JOIN hr_employee HE ON AEA.employee_id = HE.id
-          WHERE DATE(AEA.exception_date) = CURRENT_DATE
-          AND HE.emp_active = 1;
-        `,
-      },
-    };
 
-    const results = await Promise.all(
-      Object.entries(queries).flatMap(([groupKey, groupQueries]) =>
-        Object.entries(groupQueries).map(async ([key, query]) => {
-          const result = await sequelize.query<{ total?: number; total_employees_today?: number }>(
-            query,
-            {
+  public async totalDashboardReport() {
+    try {
+      const queries = {
+        employee: {
+          total: `SELECT COUNT(*) AS total FROM hr_employee;`,
+          active: `SELECT COUNT(*) AS total FROM hr_employee WHERE emp_active = 1;`,
+          inactive: `SELECT COUNT(*) AS total FROM hr_employee WHERE emp_active = 0;`,
+        },
+        assistant: {
+          total: `
+            WITH today_attendance AS (
+              SELECT
+                e.emp_dept AS department_id,
+                e.id AS employee_id
+              FROM
+                hr_employee e
+                JOIN att_punches p ON e.id = p.emp_id
+              WHERE
+                DATE(p.punch_time) = CURRENT_DATE
+              GROUP BY
+                e.emp_dept, e.id
+            )
+            SELECT
+              COUNT(ta.employee_id) AS total_employees_today
+            FROM
+              today_attendance ta;
+          `,
+          support: `
+            WITH today_attendance AS (
+              SELECT
+                e.emp_dept AS department_id,
+                e.id AS employee_id
+              FROM
+                hr_employee e
+                JOIN att_punches p ON e.id = p.emp_id
+              WHERE
+                DATE(p.punch_time) = CURRENT_DATE
+                AND e.emp_dept = (
+                  SELECT id FROM hr_department WHERE dept_name = 'Pers.Apoyo HeH'
+                )
+              GROUP BY
+                e.emp_dept, e.id
+            )
+            SELECT
+              COUNT(ta.employee_id) AS total_employees_today
+            FROM
+              today_attendance ta;
+          `,
+          normal: `
+            WITH today_attendance AS (
+              SELECT
+                e.emp_dept AS department_id,
+                e.id AS employee_id
+              FROM
+                hr_employee e
+                JOIN att_punches p ON e.id = p.emp_id
+              WHERE
+                DATE(p.punch_time) = CURRENT_DATE
+                AND e.emp_dept = (
+                  SELECT id FROM hr_department WHERE dept_name = 'Personal.HeH'
+                )
+              GROUP BY
+                e.emp_dept, e.id
+            )
+            SELECT
+              COUNT(ta.employee_id) AS total_employees_today
+            FROM
+              today_attendance ta;
+          `,
+        },
+        vacation: {
+          total: `
+            SELECT COUNT(*) AS total
+            FROM att_paycode AP
+            INNER JOIN att_exceptionassign AEA ON AP.id = AEA.paycode_id
+            INNER JOIN hr_employee HE ON AEA.employee_id = HE.id
+            WHERE DATE(AEA.exception_date) = CURRENT_DATE
+            AND HE.emp_active = 1;
+          `,
+        },
+      };
+
+      const results = await Promise.all(
+        Object.entries(queries).flatMap(([groupKey, groupQueries]) =>
+          Object.entries(groupQueries).map(async ([key, query]) => {
+            const result = await sequelize.query<{
+              total?: number;
+              total_employees_today?: number;
+            }>(query, {
               type: Sequelize.QueryTypes.SELECT,
+            });
+
+            const value = result[0]?.total ?? result[0]?.total_employees_today;
+
+            if (value !== undefined) {
+              return { [`${groupKey}.${key}`]: value };
+            } else {
+              throw new Error(
+                `Query for ${key} did not return a valid result.`
+              );
             }
-          );
+          })
+        )
+      );
 
-          const value = result[0]?.total ?? result[0]?.total_employees_today;
+      // Combina los resultados en un solo objeto
+      const combinedResults = results.reduce(
+        (acc, curr) => ({ ...acc, ...curr }),
+        {}
+      );
 
-          if (value !== undefined) {
-            return { [`${groupKey}.${key}`]: value };
-          } else {
-            throw new Error(`Query for ${key} did not return a valid result.`);
-          }
-        })
-      )
-    );
+      // Calcula earrings.attendance
+      const assistantTotal = combinedResults["assistant.total"] || 0;
+      const employeeActive = combinedResults["employee.active"] || 0;
+      combinedResults["earrings.attendance"] = Math.abs(
+        assistantTotal - employeeActive
+      );
 
-    const combinedResults = results.reduce(
-      (acc, curr) => ({ ...acc, ...curr }),
-      {}
-    );
-
-    // Calcula earrings.attendance
-    const assistantTotal = combinedResults["assistant.total"] || 0;
-    const employeeActive = combinedResults["employee.active"] || 0;
-    combinedResults["earrings.attendance"] = Math.abs(
-      assistantTotal - employeeActive
-    );
-
-    return combinedResults;
-  } catch (error) {
-    console.error("Error fetching total dashboard report:", error);
-    throw error;
+      return combinedResults;
+    } catch (error) {
+      console.error("Error fetching total dashboard report:", error);
+      throw error;
+    }
   }
-}
 
   // Total de asistencias, ausencias y atrasos
   public async getAttendanceSummaryByYear(year: string, month: string | null) {
