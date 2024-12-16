@@ -6,14 +6,6 @@ import { getMonthName } from "./getMonthName";
 import fs from 'fs';
 import path from 'path';
 
-// Obtener la ruta al archivo settings.json
-const settingsFilePath = path.join(__dirname, "..", "../dist/data/data/settings.json");
-// Leer y parsear el archivo settings.json
-const settingsData = fs.readFileSync(settingsFilePath, 'utf8');
-const settings = JSON.parse(settingsData);
-
-
-
 function getExcelColumnLetter(columnNumber: number): string {
   let columnLetter = '';
   while (columnNumber > 0) {
@@ -197,6 +189,16 @@ const processEmployeeData = (
   dateRange: Date[],
   daysArray: string[]
 ) => {
+  // Obtener la ruta al archivo settings.json
+const settingsFilePath = path.join(
+  __dirname,
+  "..",
+  "../dist/data/data/settings.json"
+);
+
+// Leer y parsear el archivo settings.json
+const settingsData = fs.readFileSync(settingsFilePath, 'utf8');
+const settings = JSON.parse(settingsData);
   const extraColumnsCount = 12; // Ajusta este valor según tus necesidades
 
   // 1. Convertir el objeto en un arreglo de [idEmpleado, Empleado[]]
@@ -239,7 +241,7 @@ const processEmployeeData = (
             horasPorDia[dayIndex] = settings.sickLeaveSymbol;
           } else if (Number(record.PaycodeID) === 12) {
             // Vacaciones
-            horasPorDia[dayIndex] = "V";
+            horasPorDia[dayIndex] = settings.vacationSymbol;
           } else if (record.HI === "HI") {
             // Solo entrada
             horasPorDia[dayIndex] = settings.entranceOnlySymbol;
@@ -301,13 +303,13 @@ const processEmployeeData = (
             pattern: "solid",
             fgColor: { argb: "FFFFFF" }, // Ajusta el color
           };
-        } else if (cell.value === "E") {
+        } else if (cell.value === settings.sickLeaveSymbol) {
           cell.fill = {
-            type: "pattern",
+            type: "pattern", 
             pattern: "solid",
-            fgColor: { argb: "FFC7CE" }, // Ajusta el color
+            fgColor: { argb: "FFC7CE" }, // Ajusta el color       d 
           };
-        } else if (cell.value === "V") {
+        } else if (cell.value === settings.vacationSymbol) {
           cell.fill = {
             type: "pattern",
             pattern: "solid",
