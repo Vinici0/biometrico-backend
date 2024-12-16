@@ -688,7 +688,7 @@ export class ExceptionService {
           return {
             columns: [
               {
-                image: path.join(__dirname, "..", "assets", "logo.png"),
+                image: path.join(__dirname, "..", "assets/assets", "logo.png"),
                 width: 70,
                 margin: [40, 20, 0, 20],
               },
