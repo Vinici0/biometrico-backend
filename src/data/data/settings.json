@@ -3,5 +3,6 @@
   "entranceOnlySymbol": "HR",
   "exitOnlySymbol": "HS",
   "vacationSymbol": "V",
-  "sickLeaveSymbol": "E"
+  "sickLeaveSymbol": "E",
+  "earlyExitSymbol": "S"
 }

@@ -22,6 +22,7 @@ export interface EmployeeAttendance {
   TipoZ: string | null; // 'Z' si no hay registros de hora, null de lo contrario
   Vacaciones: string; // 'Si' si el paycode_id es 12, 'No' de lo contrario
   Enfermedad: string; // 'Si' si el paycode_id es 11, 'No' de lo contrario
+  Permiso: string; // 'Si' si el paycode_id es 13, 'No' de lo contrario
 }
 
 export interface AsistenciaData {

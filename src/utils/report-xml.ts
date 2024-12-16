@@ -3,11 +3,11 @@ import { format, eachDayOfInterval, isBefore, parseISO } from "date-fns";
 import { es } from "date-fns/locale";
 import { AsistenciaData } from "../domain/interface/employee-attendance.interface";
 import { getMonthName } from "./getMonthName";
-import fs from 'fs';
-import path from 'path';
+import fs from "fs";
+import path from "path";
 
 function getExcelColumnLetter(columnNumber: number): string {
-  let columnLetter = '';
+  let columnLetter = "";
   while (columnNumber > 0) {
     let remainder = (columnNumber - 1) % 26;
     columnLetter = String.fromCharCode(65 + remainder) + columnLetter;
@@ -42,12 +42,11 @@ const createHeader = (
   sheet.getCell("A3").font = { size: 12, bold: true };
 };
 
-
 const createColumnHeaders = (
   sheet: ExcelJS.Worksheet,
   start: Date,
   daysArray: string[],
-  weekdayArray: string[],
+  weekdayArray: string[]
   // extraColumns: any[]
 ) => {
   const startDayCol = 6; // Columna 'F'
@@ -128,7 +127,7 @@ const createColumnHeaders = (
   sheet.getColumn(5).width = 8; // 'DÍAS'
 
   for (let i = startDayCol; i <= endDayCol; i++) {
-    sheet.getColumn(i).width = 3; 
+    sheet.getColumn(i).width = 3;
   }
 
   colIndex = endDayCol + 1;
@@ -190,15 +189,15 @@ const processEmployeeData = (
   daysArray: string[]
 ) => {
   // Obtener la ruta al archivo settings.json
-const settingsFilePath = path.join(
-  __dirname,
-  "..",
-  "../dist/data/data/settings.json"
-);
+  const settingsFilePath = path.join(
+    __dirname,
+    "..",
+    "../dist/data/data/settings.json"
+  );
 
-// Leer y parsear el archivo settings.json
-const settingsData = fs.readFileSync(settingsFilePath, 'utf8');
-const settings = JSON.parse(settingsData);
+  // Leer y parsear el archivo settings.json
+  const settingsData = fs.readFileSync(settingsFilePath, "utf8");
+  const settings = JSON.parse(settingsData);
   const extraColumnsCount = 12; // Ajusta este valor según tus necesidades
 
   // 1. Convertir el objeto en un arreglo de [idEmpleado, Empleado[]]
@@ -219,7 +218,7 @@ const settings = JSON.parse(settingsData);
   });
 
   // 3. Iterar sobre las entradas ya ordenadas
-  entries.forEach(([ , employeeRecords ], index) => {
+  entries.forEach(([, employeeRecords], index) => {
     if (employeeRecords.length === 0) return;
 
     const empleado = employeeRecords[0];
@@ -245,6 +244,9 @@ const settings = JSON.parse(settingsData);
           } else if (record.HI === "HI") {
             // Solo entrada
             horasPorDia[dayIndex] = settings.entranceOnlySymbol;
+          } else if (record.Permiso === "Si") {
+            // Permiso
+            horasPorDia[dayIndex] = settings.earlyExitSymbol;
           } else if (record.HS === "HS") {
             // Solo salida
             horasPorDia[dayIndex] = settings.exitOnlySymbol;
@@ -254,9 +256,10 @@ const settings = JSON.parse(settingsData);
           } else {
             // Total de horas
             horasPorDia[dayIndex] =
-            record.TotalHorasRedondeadas !== null && record.TotalHorasRedondeadas !== 0
-              ? record.TotalHorasRedondeadas.toString()
-              : settings.entranceOnlySymbol;
+              record.TotalHorasRedondeadas !== null &&
+              record.TotalHorasRedondeadas !== 0
+                ? record.TotalHorasRedondeadas.toString()
+                : settings.entranceOnlySymbol;
           }
         }
       }
@@ -305,9 +308,9 @@ const settings = JSON.parse(settingsData);
           };
         } else if (cell.value === settings.sickLeaveSymbol) {
           cell.fill = {
-            type: "pattern", 
+            type: "pattern",
             pattern: "solid",
-            fgColor: { argb: "FFC7CE" }, // Ajusta el color       d 
+            fgColor: { argb: "FFC7CE" }, // Ajusta el color       d
           };
         } else if (cell.value === settings.vacationSymbol) {
           cell.fill = {
@@ -338,7 +341,11 @@ export const createExcelReport = async (
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Asistencia");
 
-  createHeader(sheet, eachDayOfInterval({ start, end }).length, getMonthName(start.getMonth() + 1));
+  createHeader(
+    sheet,
+    eachDayOfInterval({ start, end }).length,
+    getMonthName(start.getMonth() + 1)
+  );
 
   const dateRange = eachDayOfInterval({ start, end });
   const daysArray = dateRange.map((date) => format(date, "d", { locale: es }));
@@ -346,11 +353,10 @@ export const createExcelReport = async (
     format(date, "EEEEE", { locale: es }).toUpperCase()
   );
 
-
   createColumnHeaders(sheet, start, daysArray, weekdayArray);
 
   styleHeaders(sheet);
-  
+
   processEmployeeData(sheet, data, dateRange, daysArray);
 
   return workbook.xlsx.writeBuffer();
