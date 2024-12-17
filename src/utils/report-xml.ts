@@ -294,13 +294,21 @@ const processEmployeeData = (
             pattern: "solid",
             fgColor: { argb: "FFFFFF" }, // Ajusta el color
           };
-        } else if (cell.value === "HS") {
+        } else if( cell.value === settings.earlyExitSymbol) {
           cell.fill = {
             type: "pattern",
             pattern: "solid",
             fgColor: { argb: "FFFFFF" }, // Ajusta el color
           };
-        } else if (cell.value === "Z") {
+
+        } else if (cell.value === settings.exitOnlySymbol) {
+          cell.fill = {
+            type: "pattern",
+            pattern: "solid",
+            fgColor: { argb: "FFFFFF" }, // Ajusta el color
+          };
+          
+        } else if (cell.value === settings.absenceSymbol) {
           cell.fill = {
             type: "pattern",
             pattern: "solid",
