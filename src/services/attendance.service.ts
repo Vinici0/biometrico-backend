@@ -280,6 +280,11 @@ export class AttendanceService {
                   ELSE 'No'
               END AS "Vacaciones",
               CASE
+                WHEN ea.paycode_id = 13 THEN 'Si'
+                ELSE 'No'
+                END
+              AS "Permiso",
+              CASE
                   WHEN ea.paycode_id = 11 THEN 'Si'
                   ELSE 'No'
               END AS "Enfermedad"
