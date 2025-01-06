@@ -15,6 +15,8 @@ export class ExceptionRoutes {
     router.get("/exception-report-pdf", exceptionController.generateAttendanceReportPDFBuffer);
     router.get("/exception-attendance-report-excel", exceptionController.generateAttendanceReportExcel);
 
+    router.get("/exception-control-report-excel", exceptionController.generateControlReportExcel);
+
     return router;
   }
 }

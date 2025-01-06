@@ -179,4 +179,41 @@ export class ExceptionController {
       res.status(500).json({ message: "Error generando el reporte." });
     }
   };
+
+  // generateControlReportExcel
+  public generateControlReportExcel: RequestHandler = async (
+    req: Request,
+    res: Response
+  ) => {
+    const { startDate, endDate, departament } = req.query;
+
+    console.log(departament);
+
+    try {
+      const workbook =
+        await this.exceptionService.generateControlReportExcel(
+          startDate as string,
+          endDate as string,
+          departament as string
+        );
+
+      // Convertir el workbook a un buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      // Configurar las cabeceras de la respuesta para el Excel
+      res.set({
+        "Content-Type":
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": `attachment; filename=exception-report-${Date.now()}.xlsx`,
+        "Content-Length": Buffer.byteLength(buffer),
+      });
+
+      // Enviar el buffer como respuesta
+
+      res.send(buffer);
+    } catch (error) {
+      console.error("Error generando el reporte de excepciones:", error);
+      res.status(500).json({ message: "Error generando el reporte." });
+    }
+  };
 }
