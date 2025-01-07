@@ -855,7 +855,7 @@ export class ExceptionService {
     data.forEach((record) => {
       worksheet.addRow({
         Nombre: record.Nombre,
-        Fecha: new Date(record.Fecha).toLocaleDateString("es-ES"),
+        Fecha: format(parseISO(record.Fecha), 'dd/MM/yyyy'),
         Entrada: record.Entrada,
         Salida: record.Salida || "",
         Departamento: record.Departamento,
