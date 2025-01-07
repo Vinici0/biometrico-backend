@@ -1246,7 +1246,7 @@ export class ExceptionService {
     // =============================================
 
     // Agregar "Codigo:" en la columna L, fila A
-    worksheet.getCell('L1').value = "Codigo:";
+    worksheet.getCell('L1').value = "Código:";
     worksheet.getCell('L1').alignment = { horizontal: "center", vertical: "middle" };
     worksheet.getCell('L1').font = { bold: true };
 
