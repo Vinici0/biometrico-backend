@@ -217,8 +217,10 @@ const processEmployeeData = (
     return a.Emp_firstname.localeCompare(b.Emp_firstname);
   });
 
+  
   // 3. Iterar sobre las entradas ya ordenadas
   entries.forEach(([, employeeRecords], index) => {
+    console.log(employeeRecords)
     if (employeeRecords.length === 0) return;
 
     const empleado = employeeRecords[0];

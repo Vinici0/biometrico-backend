@@ -9,6 +9,7 @@ import { resultsInit } from "../data/init";
 import ExcelJS from "exceljs";
 import { format, parseISO } from 'date-fns';
 import { ExceptionRecord, Attendance } from "../domain/interface/exception.interface";
+import fs from "fs";
 
 export class ExceptionService {
   private printer: PdfPrinter;
@@ -870,17 +871,18 @@ export class ExceptionService {
     return workbook;
   }
 
+
   // generateControlReportExcel
   public async generateControlReportExcel(
     startDate: string = "2024-09-01",
     endDate: string = "2024-09-30",
     department: string = "Todos"
   ): Promise<ExcelJS.Workbook> {
-    const replacements: Record<string, any> = {
-      startDate,
-      endDate,
-      department,
-    };
+    const replacements: Record<string, any> = { startDate, endDate, department };
+    const settingsFilePath = "./src/data/data/settings.json"; // Ruta del archivo settings.json
+    const settingsData = fs.readFileSync(settingsFilePath, "utf8");
+    const settings = JSON.parse(settingsData); // Leer y parsear settings.json
+
 
     let havingClause = "";
     if (department !== "Todos" && department !== "") {
@@ -890,57 +892,102 @@ export class ExceptionService {
 
     const dataQuery = `
       WITH RECURSIVE dates(d) AS (
-        SELECT date(:startDate)
-        UNION ALL
-        SELECT date(d, '+1 day')
-        FROM dates
-        WHERE d < date(:endDate)
+          SELECT date(:startDate)
+          UNION ALL
+          SELECT date(d, '+1 day')
+          FROM dates
+          WHERE d < date(:endDate)
       )
       SELECT
-        e.id,
-        e.emp_code AS "Numero",
-        e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
-        dates.d AS "Fecha",
-        MIN(time(p.punch_time)) AS "Entrada",
-        CASE
-          WHEN COUNT(p.punch_time) > 1 THEN MAX(time(p.punch_time))
-          ELSE NULL
-        END AS "Salida",
-        dp.id AS "DepartamentoID",
-        dp.dept_name AS "Departamento",
-        CASE
-          WHEN COUNT(p.punch_time) > 1 THEN
-            ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) * 24, 2)
-          ELSE NULL
-        END AS "TotalHorasRedondeadas",
-        CASE strftime('%w', dates.d)
-          WHEN '0' THEN 'Domingo'
-          WHEN '1' THEN 'Lunes'
-          WHEN '2' THEN 'Martes'
-          WHEN '3' THEN 'Miércoles'
-          WHEN '4' THEN 'Jueves'
-          WHEN '5' THEN 'Viernes'
-          WHEN '6' THEN 'Sábado'
-        END AS "DiaSemana",
-        CASE
-          WHEN COUNT(p.punch_time) > 1 THEN 'Completo'
-          WHEN COUNT(p.punch_time) = 1 THEN 'Pendiente'
-          ELSE 'Sin Marcar'
-        END AS "status"
-      FROM hr_employee e
-      CROSS JOIN dates
-      LEFT JOIN att_punches p ON p.emp_id = e.id AND date(p.punch_time) = dates.d
-      LEFT JOIN hr_department dp ON e.emp_dept = dp.id
-      WHERE e.emp_active = 1
-      GROUP BY dates.d, e.id, e.emp_code, e.emp_firstname, e.emp_lastname, dp.dept_name
+          e.id AS "EmpleadoID",
+          e.emp_code AS "Numero",
+          e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
+          e.emp_firstname AS "Emp_firstname",
+          e.emp_lastname AS "Emp_lastname",
+          dp.id AS "DepartamentoID",
+          dp.dept_name AS "Departamento",
+          dates.d AS "Fecha",
+          MIN(time(p.punch_time)) AS "Entrada",
+          CASE
+              WHEN COUNT(p.punch_time) > 1 THEN MAX(time(p.punch_time))
+              ELSE NULL
+          END AS "Salida",
+          CASE
+              WHEN COUNT(p.punch_time) > 1 THEN
+                  ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) * 24, 2)
+              ELSE NULL
+          END AS "TotalHorasRedondeadas",
+          CASE strftime('%w', dates.d)
+              WHEN '0' THEN 'Domingo'
+              WHEN '1' THEN 'Lunes'
+              WHEN '2' THEN 'Martes'
+              WHEN '3' THEN 'Miércoles'
+              WHEN '4' THEN 'Jueves'
+              WHEN '5' THEN 'Viernes'
+              WHEN '6' THEN 'Sábado'
+          END AS "DiaSemana",
+          CASE
+              WHEN COUNT(p.punch_time) > 1 THEN 'Completo'
+              WHEN COUNT(p.punch_time) = 1 THEN 'Pendiente'
+              ELSE 'Sin Marcar'
+          END AS "status",
+          CASE
+              WHEN COUNT(p.punch_time) = 0 THEN 'Z'
+              ELSE NULL
+          END AS "TipoZ",
+          CASE
+              WHEN COUNT(p.punch_time) = 1 AND strftime('%H:%M', MIN(p.punch_time)) < '12:00' THEN 'HI'
+              ELSE NULL
+          END AS "HI",
+          CASE
+              WHEN COUNT(p.punch_time) = 1 AND strftime('%H:%M', MIN(p.punch_time)) >= '12:00' THEN 'HS'
+              ELSE NULL
+          END AS "HS",
+          CASE
+              WHEN ea.paycode_id = 12 THEN 'Si'
+              ELSE 'No'
+          END AS "Vacaciones",
+          CASE
+              WHEN ea.paycode_id = 13 THEN 'Si'
+              ELSE 'No'
+          END AS "Permiso",
+          CASE
+              WHEN ea.paycode_id = 11 THEN 'Si'
+              ELSE 'No'
+          END AS "Enfermedad"
+      FROM
+          hr_employee e
+              CROSS JOIN dates
+              LEFT JOIN att_punches p ON p.emp_id = e.id AND date(p.punch_time) = dates.d
+              LEFT JOIN hr_department dp ON e.emp_dept = dp.id
+              LEFT JOIN att_exceptionassign ea ON ea.employee_id = e.id AND date(ea.exception_date) = dates.d
+      WHERE
+          e.emp_active = 1
+      GROUP BY
+          dates.d,
+          e.id,
+          e.emp_code,
+          e.emp_firstname,
+          e.emp_lastname,
+          dp.dept_name,
+          ea.paycode_id
       ${havingClause}
-      ORDER BY dp.dept_name, e.emp_lastname, e.emp_firstname, dates.d ASC;
+      ORDER BY
+          dp.dept_name,
+          e.emp_lastname,
+          e.emp_firstname,
+          dates.d ASC;
+
     `;
+
 
     const data = (await sequelize.query(dataQuery, {
       replacements,
       type: Sequelize.QueryTypes.SELECT,
-    })) as Attendance[];
+    })) as any[];
+
+    console.log(settings)
+    // console.log(data)
 
     // Extract unique dates
     const uniqueDates = [...new Set(data.map(record => record.Fecha))].sort();
@@ -948,20 +995,58 @@ export class ExceptionService {
 
     // Agrupar los datos por usuario
     const groupedData: Record<string, any> = {};
+
     data.forEach(record => {
       const userKey = record.Nombre;
       if (!groupedData[userKey]) {
         groupedData[userKey] = {
-          "N°": record.id,
+          "N°": record.EmpleadoID,
           "M": "",
           "NOMBRES": record.Nombre,
           dates: {}
         };
       }
+
+
+      // >>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+      // Validar y asignar el campo Novedades
+      let novedades = "";
+
+      if (Number(record.PaycodeID) === 11) {
+        // Enfermedad
+        novedades = settings.sickLeaveSymbol;
+      } else if (Number(record.PaycodeID) === 12) {
+        // Vacaciones
+        novedades = settings.vacationSymbol;
+      } else if (record.HI === "HI") {
+        // Solo entrada
+        novedades = settings.entranceOnlySymbol;
+      } else if (record.Permiso === "Si") {
+        // Permiso
+        novedades = settings.earlyExitSymbol;
+      } else if (record.HS === "HS") {
+        // Solo salida
+        novedades = settings.exitOnlySymbol;
+      } else if (record.TipoZ === "Z") {
+        // Ausencia
+        novedades = settings.absenceSymbol;
+      } else {
+        // Total de horas o símbolo predeterminado
+        novedades =
+          record.TotalHorasRedondeadas !== null &&
+            record.TotalHorasRedondeadas !== 0
+            ? record.TotalHorasRedondeadas.toString()
+            : settings.entranceOnlySymbol;
+      }
+
+      //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+
       groupedData[userKey].dates[record.Fecha] = {
         Entrada: record.Entrada || "",
         Salida: record.Salida || "",
-        Novedades: "", // Puedes ajustar si tienes datos reales de novedades
+        Novedades: novedades || "", // Puedes ajustar si tienes datos reales de novedades
       };
     });
 
@@ -1176,6 +1261,7 @@ export class ExceptionService {
         // Tercera columna: NOVEDADES
         const novedadesCell = worksheet.getCell(rowCounter, baseCol + 2);
         novedadesCell.value = dateData.Novedades || ""; // Mostrar vacío si no hay dato
+        novedadesCell.alignment = { horizontal: "center", vertical: "middle" };
         worksheet.mergeCells(rowCounter, baseCol + 2, rowCounter + 1, baseCol + 2);
         novedadesCell.border = {
           top: { style: "thin" },
@@ -1234,7 +1320,7 @@ export class ExceptionService {
     worksheet.views = [
       { state: 'frozen', xSplit: 3, ySplit: 3, topLeftCell: 'D4', activeCell: 'D4' },
     ];
-    
+
     // =============================================
 
     // Configurar el texto de la celda y centrarlo
@@ -1297,6 +1383,205 @@ export class ExceptionService {
     };
 
     // =============================================
+    // Tabla estatica
+    // =============================================
+
+    // Añadir tabla estática después de lo generado dinámicamente
+    const lastDynamicRow = worksheet.lastRow?.number || worksheet.rowCount;
+    const startStaticTableRow = lastDynamicRow + 2;
+
+    // Ajustar altura de la fila
+    worksheet.getRow(startStaticTableRow).height = 25;
+
+    //
+
+    // Primera fila de la tabla estática (REALIZADO POR)
+    worksheet.mergeCells(`A${startStaticTableRow}:L${startStaticTableRow}`);
+    const headerCell = worksheet.getCell(`A${startStaticTableRow}`);
+    headerCell.value = "REALIZADO POR";
+    headerCell.font = { bold: true };
+    headerCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    headerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD3D3D3' }, };
+
+    // Definir las divisiones
+    worksheet.mergeCells(`M${startStaticTableRow}:O${startStaticTableRow}`);
+    worksheet.mergeCells(`P${startStaticTableRow}:R${startStaticTableRow}`);
+
+    // Agregar el texto "REVISADO POR:" en la primera columna de la segunda fila
+    const header_revisadoCell = worksheet.getCell(`M${startStaticTableRow}`);
+    header_revisadoCell.value = "REVISADO POR";
+    header_revisadoCell.font = { bold: true };
+    header_revisadoCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    header_revisadoCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD3D3D3' }, };
+
+
+    // Agregar el texto "APROBADO POR:" en la primera columna de la segunda fila
+    const header_aprobadoCell = worksheet.getCell(`P${startStaticTableRow}`);
+    header_aprobadoCell.value = "APROBADO POR";
+    header_aprobadoCell.font = { bold: true };
+    header_aprobadoCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    header_aprobadoCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD3D3D3' }, };
+
+    //
+
+    // Segunda fila de la tabla estática (dividida en 4 secciones)
+    const secondRow = startStaticTableRow + 1;
+
+    // Ajustar altura de la fila
+    worksheet.getRow(secondRow).height = 20;
+
+    // Definir las divisiones
+    worksheet.mergeCells(`A${secondRow}:C${secondRow}`);
+    worksheet.mergeCells(`D${secondRow}:F${secondRow}`);
+    worksheet.mergeCells(`G${secondRow}:I${secondRow}`);
+    worksheet.mergeCells(`J${secondRow}:L${secondRow}`);
+    worksheet.mergeCells(`M${secondRow}:O${secondRow}`);
+    worksheet.mergeCells(`P${secondRow}:R${secondRow}`);
+
+    // Agregar el texto "FIRMA:" en la primera columna de la segunda fila
+    const firmaCell = worksheet.getCell(`A${secondRow}`);
+    firmaCell.value = "FIRMA:";
+    firmaCell.font = { bold: true };
+    firmaCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    firmaCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EEEEEE' }, };
+
+    // Agregar estilos a la celda de firma
+    const firma_revisadoCell = worksheet.getCell(`M${secondRow}`);
+    firma_revisadoCell.font = { bold: true };
+    firma_revisadoCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    firma_revisadoCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EEEEEE' }, };
+
+    // Agregar estilos
+    const firma_aprobadoCell = worksheet.getCell(`P${secondRow}`);
+    firma_aprobadoCell.font = { bold: true };
+    firma_aprobadoCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    firma_aprobadoCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EEEEEE' }, };
+
+    //
+
+    // Tercera fila de la tabla estática (dividida en 4 secciones)
+    const threeRow = secondRow + 1;
+
+    // Ajustar altura de la fila
+    worksheet.getRow(threeRow).height = 20;
+
+    // Definir las divisiones
+    worksheet.mergeCells(`A${threeRow}:C${threeRow}`);
+    worksheet.mergeCells(`D${threeRow}:F${threeRow}`);
+    worksheet.mergeCells(`G${threeRow}:I${threeRow}`);
+    worksheet.mergeCells(`J${threeRow}:L${threeRow}`);
+    worksheet.mergeCells(`M${threeRow}:O${threeRow}`);
+    worksheet.mergeCells(`P${threeRow}:R${threeRow}`);
+
+    // Agregar el texto "NOMBRE:" en la primera columna de la segunda fila
+    const nameCell = worksheet.getCell(`A${threeRow}`);
+    nameCell.value = "NOMBRE:";
+    nameCell.font = { bold: true };
+    nameCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    nameCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EEEEEE' }, };
+
+    // 
+
+    // Cuarta fila de la tabla estática (dividida en 4 secciones)
+    const fourRow = threeRow + 1;
+
+    // Ajustar altura de la fila
+    worksheet.getRow(fourRow).height = 20;
+
+    // Definir las divisiones
+    worksheet.mergeCells(`A${fourRow}:C${fourRow}`);
+    worksheet.mergeCells(`D${fourRow}:F${fourRow}`);
+    worksheet.mergeCells(`G${fourRow}:I${fourRow}`);
+    worksheet.mergeCells(`J${fourRow}:L${fourRow}`);
+    worksheet.mergeCells(`M${fourRow}:O${fourRow + 2}`);
+    worksheet.mergeCells(`P${fourRow}:R${fourRow + 2}`);
+
+    // Agregar el texto "PERIODO:" en la primera columna de la segunda fila
+    const periodCell = worksheet.getCell(`A${fourRow}`);
+    periodCell.value = "PERIODO: (Fecha)";
+    periodCell.font = { bold: true };
+    periodCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    periodCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EEEEEE' }, };
+
+    // Agregar estilos a la celda de firma
+    const period_revisadoCell = worksheet.getCell(`M${fourRow}`);
+    period_revisadoCell.value = "Jefe Administrativo \nIndustria Metal Mécanica"; // Asegúrate de que no haya espacios innecesarios antes del texto
+    period_revisadoCell.font = { bold: true };
+    period_revisadoCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; // wrapText habilitado
+
+    // Agregar estilos
+    const period_aprobadoCell = worksheet.getCell(`P${fourRow}`);
+    period_aprobadoCell.value = "Suplemte \nIndustria Metal Mécanica"; // Asegúrate de que no haya espacios innecesarios antes del texto
+    period_aprobadoCell.font = { bold: true };
+    period_aprobadoCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; // wrapText habilitado
+
+    // 
+
+    // Quinta fila de la tabla estática (dividida en 4 secciones)
+    const fiveRow = fourRow + 1;
+
+    // Ajustar altura de la fila
+    worksheet.getRow(fiveRow).height = 20;
+
+    // Definir las divisiones
+    worksheet.mergeCells(`A${fiveRow}:C${fiveRow}`);
+    worksheet.mergeCells(`D${fiveRow}:F${fiveRow}`);
+    worksheet.mergeCells(`G${fiveRow}:I${fiveRow}`);
+    worksheet.mergeCells(`J${fiveRow}:L${fiveRow}`);
+
+    // Agregar el texto "HORARIO:" en la primera columna de la segunda fila
+    const horarioCell = worksheet.getCell(`A${fiveRow}`);
+    horarioCell.value = "HORARIO";
+    horarioCell.font = { bold: true };
+    horarioCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    horarioCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EEEEEE' }, };
+
+    // 
+
+    // Ultima fila de la tabla estática
+    const sixRow = fiveRow + 1;
+
+    // Sexta fila de la tabla estática (Guardia)
+    worksheet.mergeCells(`A${sixRow}:L${sixRow}`);
+    const footerCell = worksheet.getCell(`A${sixRow}`);
+    footerCell.value = "Guardia";
+    footerCell.font = { bold: true };
+    footerCell.alignment = { horizontal: 'center', vertical: 'middle' };
+    footerCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'CCCCCC' }, };
+
+    //
+
+    // Aplicar bordes a todas las celdas de la tabla estática
+    for (let row = startStaticTableRow; row <= sixRow; row++) {
+      for (let col = 1; col <= 18; col++) { // De la columna A (1) a la columna R (18)
+        const cell = worksheet.getCell(row, col);
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      }
+    }
+
+    // =============================================
+
+    // Configurar ajustes de impresión
+    worksheet.pageSetup = {
+      paperSize: 9, // Tamaño de papel A4
+      orientation: 'landscape', // Orientación horizontal
+      fitToPage: true, // Ajustar al tamaño de la página
+      fitToWidth: 0, // Permitir varias páginas en ancho
+      fitToHeight: 1, // Ajustar todas las filas a una página
+      margins: { // Márgenes en pulgadas
+        left: 0.5,
+        right: 0.5,
+        top: 0.5,
+        bottom: 0.5,
+        header: 0.3,
+        footer: 0.3,
+      },
+    };
 
     return workbook;
 

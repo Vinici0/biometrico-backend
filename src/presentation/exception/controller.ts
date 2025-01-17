@@ -187,8 +187,6 @@ export class ExceptionController {
   ) => {
     const { startDate, endDate, departament } = req.query;
 
-    console.log(departament);
-
     try {
       const workbook =
         await this.exceptionService.generateControlReportExcel(
@@ -196,6 +194,8 @@ export class ExceptionController {
           endDate as string,
           departament as string
         );
+
+        console.log(workbook)
 
       // Convertir el workbook a un buffer
       const buffer = await workbook.xlsx.writeBuffer();

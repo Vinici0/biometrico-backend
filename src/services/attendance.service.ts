@@ -358,7 +358,7 @@ export class AttendanceService {
                 hr_employee e
                 JOIN att_punches p ON e.id = p.emp_id
               WHERE
-                DATE(p.punch_time) = CURRENT_DATE
+              DATE(p.punch_time) = CURRENT_DATE
               GROUP BY
                 e.emp_dept, e.id
             )
