@@ -1511,7 +1511,7 @@ export class ExceptionService {
 
     // Agregar estilos
     const period_aprobadoCell = worksheet.getCell(`P${fourRow}`);
-    period_aprobadoCell.value = "Suplemte \nIndustria Metal Mécanica"; // Asegúrate de que no haya espacios innecesarios antes del texto
+    period_aprobadoCell.value = "Superintendente \nIndustria Metal Mecánica"; // Asegúrate de que no haya espacios innecesarios antes del texto
     period_aprobadoCell.font = { bold: true };
     period_aprobadoCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; // wrapText habilitado
 
@@ -1531,7 +1531,7 @@ export class ExceptionService {
 
     // Agregar el texto "HORARIO:" en la primera columna de la segunda fila
     const horarioCell = worksheet.getCell(`A${fiveRow}`);
-    horarioCell.value = "HORARIO";
+    horarioCell.value = "HORARIO:";
     horarioCell.font = { bold: true };
     horarioCell.alignment = { horizontal: 'center', vertical: 'middle' };
     horarioCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EEEEEE' }, };

@@ -8,7 +8,6 @@ import { CustomError } from "../../domain/response/custom.error";
 export class EmployeeController {
   constructor(private employeeService: EmployeeService) {}
 
-  // Método para obtener empleados con paginación y búsqueda
   public getEmployees: RequestHandler = (req: Request, res: Response) => {
     const { searchTerm, page, pageSize } = req.query;
     console.log(searchTerm, page, pageSize);
@@ -27,7 +26,6 @@ export class EmployeeController {
       });
   };
 
-  // Método para obtener empleados por término de búsqueda
   public getEmployeesByTerm: RequestHandler = (req: Request, res: Response) => {
     const { searchTerm } = req.query;
     console.log(searchTerm);
