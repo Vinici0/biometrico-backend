@@ -1336,10 +1336,19 @@ export class ExceptionService {
     worksheet.getCell('L1').alignment = { horizontal: "center", vertical: "middle" };
     worksheet.getCell('L1').font = { bold: true };
 
+    // Agregar EL CODIGO en la columna T, fila A
+    worksheet.getCell('M1').value = "F-RUH-SGF-001";
+    worksheet.getCell('M1').alignment = { horizontal: "center", vertical: "middle" };
+    worksheet.getCell('M1').font = { bold: true };
+
     // Agregar "Versión:" en la columna L, fila B
     worksheet.getCell('L2').value = "Versión:";
     worksheet.getCell('L2').alignment = { horizontal: "center", vertical: "middle" };
     worksheet.getCell('L2').font = { bold: true };
+
+    // Agregar LA VERSION en la columna R, fila B
+    worksheet.getCell('M2').value = "04";
+    worksheet.getCell('M2').alignment = { horizontal: "center", vertical: "middle" };
 
 
     // Agregar bordes y formato a las celdas unidas L1:O1 y L2:O2
@@ -1480,6 +1489,14 @@ export class ExceptionService {
     nameCell.alignment = { horizontal: 'center', vertical: 'middle' };
     nameCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EEEEEE' }, };
 
+    const name_revisadoCell = worksheet.getCell(`M${threeRow}`);
+    name_revisadoCell.value = "Ing. Jessenia Maldonado"; // Asegúrate de que no haya espacios innecesarios antes del texto
+    name_revisadoCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; // wrapText habilitado
+
+    const name_aprovadoCell = worksheet.getCell(`P${threeRow}`);
+    name_aprovadoCell.value = "Ing. Iván Ontaneda"; // Asegúrate de que no haya espacios innecesarios antes del texto
+    name_aprovadoCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; // wrapText habilitado
+
     // 
 
     // Cuarta fila de la tabla estática (dividida en 4 secciones)
@@ -1505,13 +1522,13 @@ export class ExceptionService {
 
     // Agregar estilos a la celda de firma
     const period_revisadoCell = worksheet.getCell(`M${fourRow}`);
-    period_revisadoCell.value = "Jefe Administrativo \nIndustria Metal Mécanica"; // Asegúrate de que no haya espacios innecesarios antes del texto
+    period_revisadoCell.value = "Jefe Administrativo \nIndustria Metal Mecánica"; // Asegúrate de que no haya espacios innecesarios antes del texto
     period_revisadoCell.font = { bold: true };
     period_revisadoCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; // wrapText habilitado
 
     // Agregar estilos
     const period_aprobadoCell = worksheet.getCell(`P${fourRow}`);
-    period_aprobadoCell.value = "Suplemte \nIndustria Metal Mécanica"; // Asegúrate de que no haya espacios innecesarios antes del texto
+    period_aprobadoCell.value = "Superintendente \nIndustria Metal Mecánica"; // Asegúrate de que no haya espacios innecesarios antes del texto
     period_aprobadoCell.font = { bold: true };
     period_aprobadoCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }; // wrapText habilitado
 
