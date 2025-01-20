@@ -977,9 +977,7 @@ export class ExceptionService {
           e.emp_lastname,
           e.emp_firstname,
           dates.d ASC;
-
     `;
-
 
     const data = (await sequelize.query(dataQuery, {
       replacements,
@@ -1033,11 +1031,11 @@ export class ExceptionService {
         novedades = settings.absenceSymbol;
       } else {
         // Total de horas o símbolo predeterminado
-        novedades =
-          record.TotalHorasRedondeadas !== null &&
-            record.TotalHorasRedondeadas !== 0
-            ? record.TotalHorasRedondeadas.toString()
-            : settings.entranceOnlySymbol;
+        // novedades =
+        //   record.TotalHorasRedondeadas !== null &&
+        //     record.TotalHorasRedondeadas !== 0
+        //     ? record.TotalHorasRedondeadas.toString()
+        //     : settings.entranceOnlySymbol;
       }
 
       //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
@@ -1548,12 +1546,10 @@ export class ExceptionService {
 
     // Agregar el texto "HORARIO:" en la primera columna de la segunda fila
     const horarioCell = worksheet.getCell(`A${fiveRow}`);
-    horarioCell.value = "HORARIO";
+    horarioCell.value = "HORARIO:";
     horarioCell.font = { bold: true };
     horarioCell.alignment = { horizontal: 'center', vertical: 'middle' };
     horarioCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'EEEEEE' }, };
-
-    // 
 
     // Ultima fila de la tabla estática
     const sixRow = fiveRow + 1;
