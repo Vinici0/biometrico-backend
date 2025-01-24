@@ -960,7 +960,7 @@ export class ExceptionService {
               CROSS JOIN dates
               LEFT JOIN att_punches p ON p.emp_id = e.id AND date(p.punch_time) = dates.d
               LEFT JOIN hr_department dp ON e.emp_dept = dp.id
-              LEFT JOIN att_exceptionassign ea ON ea.employee_id = e.id AND date(ea.exception_date) = dates.d
+              LEFT JOIN att_exceptionassign ea ON ea.employee_id = e.id
       WHERE
           e.emp_active = 1
       GROUP BY
