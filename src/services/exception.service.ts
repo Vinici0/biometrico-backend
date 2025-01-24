@@ -872,6 +872,30 @@ export class ExceptionService {
   }
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   // generateControlReportExcel
   public async generateControlReportExcel(
     startDate: string = "2024-09-01",
@@ -889,35 +913,29 @@ export class ExceptionService {
       havingClause = `HAVING "DepartamentoID" = :department`;
       replacements.department = department;
     }
-
+    
     const dataQuery = `
-      WITH RECURSIVE dates(d) AS (
-          SELECT date(:startDate)
-          UNION ALL
-          SELECT date(d, '+1 day')
-          FROM dates
-          WHERE d < date(:endDate)
+      WITH RECURSIVE dates AS (
+        SELECT DATE(:startDate) AS att_date
+        UNION ALL
+        SELECT DATE(att_date, '+1 day')
+        FROM dates
+        WHERE att_date < DATE(:endDate)
       )
       SELECT
           e.id AS "EmpleadoID",
           e.emp_code AS "Numero",
+          e.emp_pin AS "NumeroPIN",
           e.emp_firstname || ' ' || e.emp_lastname AS "Nombre",
           e.emp_firstname AS "Emp_firstname",
           e.emp_lastname AS "Emp_lastname",
           dp.id AS "DepartamentoID",
           dp.dept_name AS "Departamento",
-          dates.d AS "Fecha",
-          MIN(time(p.punch_time)) AS "Entrada",
-          CASE
-              WHEN COUNT(p.punch_time) > 1 THEN MAX(time(p.punch_time))
-              ELSE NULL
-          END AS "Salida",
-          CASE
-              WHEN COUNT(p.punch_time) > 1 THEN
-                  ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) * 24, 2)
-              ELSE NULL
-          END AS "TotalHorasRedondeadas",
-          CASE strftime('%w', dates.d)
+          d.att_date AS "Fecha",
+          MIN(strftime('%H:%M', p.punch_time)) AS "Entrada",
+          MAX(strftime('%H:%M', p.punch_time)) AS "Salida",
+          ROUND((julianday(MAX(p.punch_time)) - julianday(MIN(p.punch_time))) * 24, 2) AS "TotalHorasRedondeadas",
+          CASE strftime('%w', d.att_date)
               WHEN '0' THEN 'Domingo'
               WHEN '1' THEN 'Lunes'
               WHEN '2' THEN 'Martes'
@@ -930,7 +948,7 @@ export class ExceptionService {
               WHEN COUNT(p.punch_time) > 1 THEN 'Completo'
               WHEN COUNT(p.punch_time) = 1 THEN 'Pendiente'
               ELSE 'Sin Marcar'
-          END AS "status",
+          END AS "Status",
           CASE
               WHEN COUNT(p.punch_time) = 0 THEN 'Z'
               ELSE NULL
@@ -957,35 +975,28 @@ export class ExceptionService {
           END AS "Enfermedad"
       FROM
           hr_employee e
-              CROSS JOIN dates
-              LEFT JOIN att_punches p ON p.emp_id = e.id AND date(p.punch_time) = dates.d
+              CROSS JOIN dates d
+              LEFT JOIN att_punches p ON e.id = p.emp_id AND DATE(p.punch_time) = d.att_date
               LEFT JOIN hr_department dp ON e.emp_dept = dp.id
-              LEFT JOIN att_exceptionassign ea ON ea.employee_id = e.id
+              LEFT JOIN att_exceptionassign ea ON ea.employee_id = e.id AND DATE(ea.exception_date) = d.att_date
       WHERE
           e.emp_active = 1
       GROUP BY
-          dates.d,
-          e.id,
-          e.emp_code,
-          e.emp_firstname,
-          e.emp_lastname,
-          dp.dept_name,
-          ea.paycode_id
+          e.id, d.att_date, e.emp_code, e.emp_pin, e.emp_firstname, e.emp_lastname, dp.dept_name, dp.id, ea.paycode_id
       ${havingClause}
       ORDER BY
-          dp.dept_name,
-          e.emp_lastname,
-          e.emp_firstname,
-          dates.d ASC;
+          dp.dept_name DESC,
+          e.emp_lastname DESC,
+          e.emp_firstname DESC,
+          d.att_date ASC;
     `;
+    
 
     const data = (await sequelize.query(dataQuery, {
       replacements,
       type: Sequelize.QueryTypes.SELECT,
     })) as any[];
 
-    console.log(settings)
-    // console.log(data)
 
     // Extract unique dates
     const uniqueDates = [...new Set(data.map(record => record.Fecha))].sort();
@@ -993,7 +1004,7 @@ export class ExceptionService {
 
     // Agrupar los datos por usuario
     const groupedData: Record<string, any> = {};
-
+    console.log(data)
     data.forEach(record => {
       const userKey = record.Nombre;
       if (!groupedData[userKey]) {
@@ -1004,17 +1015,17 @@ export class ExceptionService {
           dates: {}
         };
       }
-
+      
 
       // >>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
       // Validar y asignar el campo Novedades
       let novedades = "";
 
-      if (Number(record.PaycodeID) === 11) {
+      if (record.Enfermedad === 'Si') {
         // Enfermedad
         novedades = settings.sickLeaveSymbol;
-      } else if (Number(record.PaycodeID) === 12) {
+      } else if (record.Vacaciones === 'Si') {
         // Vacaciones
         novedades = settings.vacationSymbol;
       } else if (record.HI === "HI") {
@@ -1030,7 +1041,7 @@ export class ExceptionService {
         // Ausencia
         novedades = settings.absenceSymbol;
       } else {
-        // Total de horas o símbolo predeterminado
+        // // Total de horas o símbolo predeterminado
         // novedades =
         //   record.TotalHorasRedondeadas !== null &&
         //     record.TotalHorasRedondeadas !== 0
@@ -1044,7 +1055,7 @@ export class ExceptionService {
       groupedData[userKey].dates[record.Fecha] = {
         Entrada: record.Entrada || "",
         Salida: record.Salida || "",
-        Novedades: novedades || "", // Puedes ajustar si tienes datos reales de novedades
+        Novedades: novedades || "",
       };
     });
 
