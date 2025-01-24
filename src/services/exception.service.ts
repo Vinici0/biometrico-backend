@@ -903,7 +903,13 @@ export class ExceptionService {
     department: string = "Todos"
   ): Promise<ExcelJS.Workbook> {
     const replacements: Record<string, any> = { startDate, endDate, department };
-    const settingsFilePath = "./src/data/data/settings.json"; // Ruta del archivo settings.json
+    // const settingsFilePath = "./src/data/data/settings.json"; // Ruta del archivo settings.json
+      const settingsFilePath = path.join(
+        __dirname,
+        "..",
+        "../dist/data/data/settings.json"
+      );
+
     const settingsData = fs.readFileSync(settingsFilePath, "utf8");
     const settings = JSON.parse(settingsData); // Leer y parsear settings.json
 
