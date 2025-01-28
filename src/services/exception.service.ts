@@ -871,31 +871,6 @@ export class ExceptionService {
     return workbook;
   }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // generateControlReportExcel
   public async generateControlReportExcel(
     startDate: string = "2024-09-01",
@@ -991,9 +966,9 @@ export class ExceptionService {
           e.id, d.att_date, e.emp_code, e.emp_pin, e.emp_firstname, e.emp_lastname, dp.dept_name, dp.id, ea.paycode_id
       ${havingClause}
       ORDER BY
-          dp.dept_name DESC,
-          e.emp_lastname DESC,
-          e.emp_firstname DESC,
+          dp.dept_name,
+          e.emp_lastname,
+          e.emp_firstname,
           d.att_date ASC;
     `;
     
@@ -1021,9 +996,6 @@ export class ExceptionService {
           dates: {}
         };
       }
-      
-
-      // >>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
       // Validar y asignar el campo Novedades
       let novedades = "";
